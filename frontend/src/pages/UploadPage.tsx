@@ -17,6 +17,12 @@ interface UploadPageProps {
   canAccessCatalog?: boolean;
 }
 
+interface ImportWarningSummaryItem {
+  field: string | null;
+  summary: string;
+  count: number;
+}
+
 function getStatusTone(
   status: ImportResponse["status"],
 ): "good" | "warn" | "bad" {
@@ -62,6 +68,98 @@ function mapBatchDetailsToImportResponse(
   };
 }
 
+function getFieldLabel(field: string | null): string {
+  switch (field) {
+    case "offer_code":
+      return "Код предложения";
+    case "brand":
+      return "Марка";
+    case "model":
+      return "Модель";
+    case "modification":
+      return "Модификация";
+    case "vehicle_type":
+      return "Тип техники";
+    case "year":
+      return "Год";
+    case "mileage_km":
+      return "Пробег";
+    case "key_count":
+      return "Количество ключей";
+    case "pts_type":
+      return "Тип ПТС";
+    case "has_encumbrance":
+      return "Обременение";
+    case "is_deregistered":
+      return "Снят с учета";
+    case "responsible_person":
+      return "Ответственный";
+    case "storage_address":
+      return "Адрес хранения";
+    case "days_on_sale":
+      return "Дней в продаже";
+    case "price":
+      return "Цена";
+    case "yandex_disk_url":
+      return "Ссылка на фото";
+    case "booking_status":
+      return "Статус брони";
+    case "external_id":
+      return "Внешний ID";
+    case "crm_ref":
+      return "CRM ref";
+    case "website_url":
+      return "Ссылка на источник";
+    default:
+      return field ?? "Общее";
+  }
+}
+
+function getWarningSummaryLabel(field: string | null, message: string): string {
+  if (message === "Required field is empty") {
+    return "Обязательное поле пустое";
+  }
+
+  if (message === "Duplicate offer_code in the import file") {
+    return "Дубликат кода предложения в файле";
+  }
+
+  if (message.startsWith("Missing required column:")) {
+    return "В файле отсутствует обязательная колонка";
+  }
+
+  if (message.startsWith("Invalid ")) {
+    return `Некорректное значение поля «${getFieldLabel(field)}»`;
+  }
+
+  return message;
+}
+
+function buildWarningSummary(
+  errors: ImportResponse["errors"],
+): ImportWarningSummaryItem[] {
+  const grouped = new Map<string, ImportWarningSummaryItem>();
+
+  errors.forEach((item) => {
+    const summary = getWarningSummaryLabel(item.field, item.message);
+    const groupKey = `${item.field ?? "general"}::${summary}`;
+    const existing = grouped.get(groupKey);
+
+    if (existing) {
+      existing.count += 1;
+      return;
+    }
+
+    grouped.set(groupKey, {
+      field: item.field,
+      summary,
+      count: 1,
+    });
+  });
+
+  return Array.from(grouped.values()).sort((left, right) => right.count - left.count);
+}
+
 export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +169,7 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
   const [result, setResult] = useState<ImportResponse | null>(null);
   const [history, setHistory] = useState<ImportBatchListItem[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const warningSummary = result ? buildWarningSummary(result.errors) : [];
 
   async function loadHistory() {
     try {
@@ -241,48 +340,68 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
           {result.errors.length > 0 && (
             <>
               <h3>Предупреждения</h3>
-              <div className="table-wrap desktop-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Строка</th>
-                      <th>Поле</th>
-                      <th>Сообщение</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.errors.map((item, index) => (
-                      <tr key={`${item.rowNumber}-${item.field}-${index}`}>
-                        <td>{item.rowNumber}</td>
-                        <td>{item.field ?? "-"}</td>
-                        <td>{item.message}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mobile-cards">
-                {result.errors.map((item, index) => (
-                  <article
-                    key={`mobile-${item.rowNumber}-${item.field}-${index}`}
-                    className="mobile-card"
+              <div className="summary-grid import-warning-summary-grid">
+                {warningSummary.map((item, index) => (
+                  <div
+                    key={`${item.field ?? "general"}-${item.summary}-${index}`}
+                    className="summary-item import-warning-summary-item"
                   >
-                    <div className="mobile-card__head">
-                      <strong>Предупреждение в строке {item.rowNumber}</strong>
-                    </div>
-                    <dl className="mobile-card__list">
-                      <div className="mobile-card__row">
-                        <dt className="mobile-card__label">Поле</dt>
-                        <dd className="mobile-card__value">{item.field ?? "-"}</dd>
-                      </div>
-                      <div className="mobile-card__row">
-                        <dt className="mobile-card__label">Сообщение</dt>
-                        <dd className="mobile-card__value">{item.message}</dd>
-                      </div>
-                    </dl>
-                  </article>
+                    <span>
+                      {item.field ? getFieldLabel(item.field) : "Общее предупреждение"}
+                    </span>
+                    <strong>{item.count}</strong>
+                    <p>{item.summary}</p>
+                  </div>
                 ))}
               </div>
+
+              <details className="import-warning-details">
+                <summary>
+                  Показать детали ({result.errors.length})
+                </summary>
+                <div className="table-wrap desktop-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Строка</th>
+                        <th>Поле</th>
+                        <th>Сообщение</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.errors.map((item, index) => (
+                        <tr key={`${item.rowNumber}-${item.field}-${index}`}>
+                          <td>{item.rowNumber}</td>
+                          <td>{getFieldLabel(item.field)}</td>
+                          <td>{item.message}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mobile-cards">
+                  {result.errors.map((item, index) => (
+                    <article
+                      key={`mobile-${item.rowNumber}-${item.field}-${index}`}
+                      className="mobile-card"
+                    >
+                      <div className="mobile-card__head">
+                        <strong>Предупреждение в строке {item.rowNumber}</strong>
+                      </div>
+                      <dl className="mobile-card__list">
+                        <div className="mobile-card__row">
+                          <dt className="mobile-card__label">Поле</dt>
+                          <dd className="mobile-card__value">{getFieldLabel(item.field)}</dd>
+                        </div>
+                        <div className="mobile-card__row">
+                          <dt className="mobile-card__label">Сообщение</dt>
+                          <dd className="mobile-card__value">{item.message}</dd>
+                        </div>
+                      </dl>
+                    </article>
+                  ))}
+                </div>
+              </details>
             </>
           )}
         </div>

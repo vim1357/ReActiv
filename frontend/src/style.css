@@ -797,6 +797,29 @@ a {
   letter-spacing: -0.02em;
 }
 
+.import-warning-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.import-warning-summary-item p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.import-warning-details {
+  display: grid;
+  gap: 12px;
+}
+
+.import-warning-details summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .summary-link {
   display: inline-flex;
   align-items: center;
