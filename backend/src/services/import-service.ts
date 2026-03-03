@@ -87,36 +87,6 @@ function mapStoredToNormalizedRow(row: StoredVehicleOfferRow): NormalizedVehicle
   };
 }
 
-function areRowsEquivalent(
-  currentRow: NormalizedVehicleOfferRow,
-  nextRow: NormalizedVehicleOfferRow,
-): boolean {
-  return (
-    currentRow.offer_code === nextRow.offer_code &&
-    currentRow.status === nextRow.status &&
-    currentRow.brand === nextRow.brand &&
-    currentRow.model === nextRow.model &&
-    currentRow.modification === nextRow.modification &&
-    currentRow.vehicle_type === nextRow.vehicle_type &&
-    currentRow.year === nextRow.year &&
-    currentRow.mileage_km === nextRow.mileage_km &&
-    currentRow.key_count === nextRow.key_count &&
-    currentRow.pts_type === nextRow.pts_type &&
-    currentRow.has_encumbrance === nextRow.has_encumbrance &&
-    currentRow.is_deregistered === nextRow.is_deregistered &&
-    currentRow.responsible_person === nextRow.responsible_person &&
-    currentRow.storage_address === nextRow.storage_address &&
-    currentRow.days_on_sale === nextRow.days_on_sale &&
-    currentRow.price === nextRow.price &&
-    currentRow.yandex_disk_url === nextRow.yandex_disk_url &&
-    currentRow.booking_status === nextRow.booking_status &&
-    currentRow.external_id === nextRow.external_id &&
-    currentRow.crm_ref === nextRow.crm_ref &&
-    currentRow.website_url === nextRow.website_url &&
-    currentRow.title === nextRow.title
-  );
-}
-
 export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
   backfillVehicleOfferSnapshotsIfEmpty();
   const previousImportBatchId = getLatestSuccessfulImportBatchId();
@@ -304,12 +274,7 @@ export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
         return;
       }
 
-      if (areRowsEquivalent(previousRow, row)) {
-        unchangedRows += 1;
-        return;
-      }
-
-      updatedRows += 1;
+      unchangedRows += 1;
     });
 
     previousRowsByOfferCode.forEach((_row, offerCode) => {
