@@ -50,6 +50,10 @@ export interface ImportResponse {
     totalRows: number;
     importedRows: number;
     skippedRows: number;
+    addedRows: number;
+    updatedRows: number;
+    removedRows: number;
+    unchangedRows: number;
   };
   errors: ImportErrorItem[];
 }
@@ -61,6 +65,10 @@ export interface ImportBatchListItem {
   total_rows: number;
   imported_rows: number;
   skipped_rows: number;
+  added_rows: number;
+  updated_rows: number;
+  removed_rows: number;
+  unchanged_rows: number;
   created_at: string;
 }
 

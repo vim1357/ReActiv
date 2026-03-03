@@ -173,6 +173,22 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
               <span>Пропущено</span>
               <strong>{result.summary.skippedRows}</strong>
             </div>
+            <div className="summary-item">
+              <span>Добавлено</span>
+              <strong>{result.summary.addedRows}</strong>
+            </div>
+            <div className="summary-item">
+              <span>Обновлено</span>
+              <strong>{result.summary.updatedRows}</strong>
+            </div>
+            <div className="summary-item">
+              <span>Ушло</span>
+              <strong>{result.summary.removedRows}</strong>
+            </div>
+            <div className="summary-item">
+              <span>Без изменений</span>
+              <strong>{result.summary.unchangedRows}</strong>
+            </div>
           </div>
 
           <p>
@@ -248,6 +264,10 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
                   <th>Всего</th>
                   <th>Импортировано</th>
                   <th>Пропущено</th>
+                  <th>Добавлено</th>
+                  <th>Обновлено</th>
+                  <th>Ушло</th>
+                  <th>Без изменений</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,6 +279,10 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
                     <td>{item.total_rows}</td>
                     <td>{item.imported_rows}</td>
                     <td>{item.skipped_rows}</td>
+                    <td>{item.added_rows}</td>
+                    <td>{item.updated_rows}</td>
+                    <td>{item.removed_rows}</td>
+                    <td>{item.unchanged_rows}</td>
                   </tr>
                 ))}
               </tbody>
@@ -287,6 +311,22 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
                   <div className="mobile-card__row">
                     <dt className="mobile-card__label">Пропущено</dt>
                     <dd className="mobile-card__value">{item.skipped_rows}</dd>
+                  </div>
+                  <div className="mobile-card__row">
+                    <dt className="mobile-card__label">Добавлено</dt>
+                    <dd className="mobile-card__value">{item.added_rows}</dd>
+                  </div>
+                  <div className="mobile-card__row">
+                    <dt className="mobile-card__label">Обновлено</dt>
+                    <dd className="mobile-card__value">{item.updated_rows}</dd>
+                  </div>
+                  <div className="mobile-card__row">
+                    <dt className="mobile-card__label">Ушло</dt>
+                    <dd className="mobile-card__value">{item.removed_rows}</dd>
+                  </div>
+                  <div className="mobile-card__row">
+                    <dt className="mobile-card__label">Без изменений</dt>
+                    <dd className="mobile-card__value">{item.unchanged_rows}</dd>
                   </div>
                 </dl>
               </article>
