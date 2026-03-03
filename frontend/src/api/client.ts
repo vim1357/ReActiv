@@ -8,6 +8,7 @@ import type {
   GuestActivityEventsResponse,
   GuestActivitySummaryResponse,
   ImportBatchesResponse,
+  ImportBatchDetailsResponse,
   CatalogFiltersResponse,
   CatalogItemsResponse,
   ImportResponse,
@@ -514,6 +515,19 @@ export async function getImportBatches(
     throw new Error("Не удалось загрузить историю импортов");
   }
   return (await response.json()) as ImportBatchesResponse;
+}
+
+export async function getImportBatchDetails(
+  importBatchId: string,
+): Promise<ImportBatchDetailsResponse> {
+  const response = await fetch(buildUrl(`/imports/${importBatchId}`), {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Не удалось загрузить данные импорта");
+  }
+  return (await response.json()) as ImportBatchDetailsResponse;
 }
 
 export async function clearImports(): Promise<ClearImportsResponse> {

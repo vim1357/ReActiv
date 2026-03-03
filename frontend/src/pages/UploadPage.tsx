@@ -1,8 +1,17 @@
 ﻿import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { clearImports, getImportBatches, uploadImport } from "../api/client";
-import type { ImportBatchListItem, ImportResponse } from "../types/api";
+import {
+  clearImports,
+  getImportBatchDetails,
+  getImportBatches,
+  uploadImport,
+} from "../api/client";
+import type {
+  ImportBatchDetailsResponse,
+  ImportBatchListItem,
+  ImportResponse,
+} from "../types/api";
 
 interface UploadPageProps {
   canAccessCatalog?: boolean;
@@ -30,6 +39,29 @@ function getStatusLabel(status: ImportResponse["status"]): string {
   return "Ошибка";
 }
 
+function mapBatchDetailsToImportResponse(
+  details: ImportBatchDetailsResponse,
+): ImportResponse {
+  return {
+    importBatchId: details.importBatch.id,
+    status: details.importBatch.status,
+    summary: {
+      totalRows: details.importBatch.total_rows,
+      importedRows: details.importBatch.imported_rows,
+      skippedRows: details.importBatch.skipped_rows,
+      addedRows: details.importBatch.added_rows,
+      updatedRows: details.importBatch.updated_rows,
+      removedRows: details.importBatch.removed_rows,
+      unchangedRows: details.importBatch.unchanged_rows,
+    },
+    errors: details.errors.map((item) => ({
+      rowNumber: item.row_number,
+      field: item.field,
+      message: item.message,
+    })),
+  };
+}
+
 export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +77,15 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
       setHistoryError(null);
       const response = await getImportBatches(20);
       setHistory(response.items);
+      const latestImportId = response.items[0]?.id;
+
+      if (!latestImportId) {
+        setResult(null);
+        return;
+      }
+
+      const details = await getImportBatchDetails(latestImportId);
+      setResult(mapBatchDetailsToImportResponse(details));
     } catch {
       setHistoryError("Не удалось загрузить историю импортов");
     }

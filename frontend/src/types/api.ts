@@ -76,6 +76,20 @@ export interface ImportBatchesResponse {
   items: ImportBatchListItem[];
 }
 
+export interface ImportErrorRecord {
+  id: number;
+  import_batch_id: string;
+  row_number: number;
+  field: string | null;
+  message: string;
+  created_at: string;
+}
+
+export interface ImportBatchDetailsResponse {
+  importBatch: ImportBatchListItem;
+  errors: ImportErrorRecord[];
+}
+
 export interface ClearImportsResponse {
   message: string;
   importBatchesDeleted: number;
