@@ -23,6 +23,10 @@ interface ImportWarningSummaryItem {
   count: number;
 }
 
+function isCriticalImportError(error: ImportResponse["errors"][number]): boolean {
+  return error.field === "offer_code" || error.field === "brand";
+}
+
 function getStatusTone(
   status: ImportResponse["status"],
 ): "good" | "warn" | "bad" {
@@ -177,7 +181,14 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
   const [result, setResult] = useState<ImportResponse | null>(null);
   const [history, setHistory] = useState<ImportBatchListItem[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const warningSummary = result ? buildWarningSummary(result.errors) : [];
+  const criticalErrors = result
+    ? result.errors.filter((item) => isCriticalImportError(item))
+    : [];
+  const warningErrors = result
+    ? result.errors.filter((item) => !isCriticalImportError(item))
+    : [];
+  const criticalSummary = buildWarningSummary(criticalErrors);
+  const warningSummary = buildWarningSummary(warningErrors);
 
   async function loadHistory() {
     try {
@@ -345,7 +356,77 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
             </Link>
           </p>
 
-          {result.errors.length > 0 && (
+          {criticalErrors.length > 0 && (
+            <>
+              <h3>Критичные ошибки</h3>
+              <div className="summary-grid import-warning-summary-grid">
+                {criticalSummary.map((item, index) => (
+                  <div
+                    key={`critical-${item.field ?? "general"}-${item.summary}-${index}`}
+                    className="summary-item import-warning-summary-item"
+                  >
+                    <span>
+                      {item.field ? getFieldLabel(item.field) : "Критичная ошибка"}
+                    </span>
+                    <strong>{item.count}</strong>
+                    <p>{item.summary}</p>
+                  </div>
+                ))}
+              </div>
+
+              <details className="import-warning-details">
+                <summary>
+                  Показать детали критичных ошибок ({criticalErrors.length})
+                </summary>
+                <div className="table-wrap desktop-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Строка</th>
+                        <th>Поле</th>
+                        <th>Сообщение</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {criticalErrors.map((item, index) => (
+                        <tr key={`critical-${item.rowNumber}-${item.field}-${index}`}>
+                          <td>{item.rowNumber}</td>
+                          <td>{getFieldLabel(item.field)}</td>
+                          <td>{getWarningText(item.field, item.message)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mobile-cards">
+                  {criticalErrors.map((item, index) => (
+                    <article
+                      key={`mobile-critical-${item.rowNumber}-${item.field}-${index}`}
+                      className="mobile-card"
+                    >
+                      <div className="mobile-card__head">
+                        <strong>Критичная ошибка в строке {item.rowNumber}</strong>
+                      </div>
+                      <dl className="mobile-card__list">
+                        <div className="mobile-card__row">
+                          <dt className="mobile-card__label">Поле</dt>
+                          <dd className="mobile-card__value">{getFieldLabel(item.field)}</dd>
+                        </div>
+                        <div className="mobile-card__row">
+                          <dt className="mobile-card__label">Сообщение</dt>
+                          <dd className="mobile-card__value">
+                            {getWarningText(item.field, item.message)}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
+                  ))}
+                </div>
+              </details>
+            </>
+          )}
+
+          {warningErrors.length > 0 && (
             <>
               <h3>Предупреждения</h3>
               <div className="summary-grid import-warning-summary-grid">
@@ -365,7 +446,7 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
 
               <details className="import-warning-details">
                 <summary>
-                  Показать детали ({result.errors.length})
+                  Показать детали предупреждений ({warningErrors.length})
                 </summary>
                 <div className="table-wrap desktop-table">
                   <table>
@@ -377,7 +458,7 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {result.errors.map((item, index) => (
+                      {warningErrors.map((item, index) => (
                         <tr key={`${item.rowNumber}-${item.field}-${index}`}>
                           <td>{item.rowNumber}</td>
                           <td>{getFieldLabel(item.field)}</td>
@@ -388,7 +469,7 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
                   </table>
                 </div>
                 <div className="mobile-cards">
-                  {result.errors.map((item, index) => (
+                  {warningErrors.map((item, index) => (
                     <article
                       key={`mobile-${item.rowNumber}-${item.field}-${index}`}
                       className="mobile-card"

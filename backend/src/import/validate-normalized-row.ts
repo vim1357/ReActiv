@@ -62,7 +62,10 @@ export function validateNormalizedRow(
   }
 
   if (row.price === null) {
-    errors.push({ field: "price", message: "Invalid price value" });
+    errors.push({
+      field: "price",
+      message: row.price_present ? "Invalid price value" : "Field is empty",
+    });
   }
 
   return errors;

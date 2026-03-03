@@ -83,6 +83,7 @@ function mapStoredToNormalizedRow(row: StoredVehicleOfferRow): NormalizedVehicle
     mileage_km_present: row.mileage_km !== null,
     days_on_sale_present: row.days_on_sale !== null,
     is_deregistered_present: row.is_deregistered !== null,
+    price_present: row.price !== null,
   };
 }
 
@@ -182,38 +183,64 @@ export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
       const rowNumber = index + 2;
       const normalizedRow = normalizeVehicleOfferRow(row, columnMap.fieldToColumnIndex);
       const validationErrors = validateNormalizedRow(normalizedRow);
-      let shouldSkipRow = false;
+      const blockingErrors = validationErrors.filter((validationError) =>
+        BLOCKING_VALIDATION_FIELDS.has(validationError.field),
+      );
+      const nonBlockingErrors =
+        blockingErrors.length > 0
+          ? []
+          : validationErrors.filter(
+              (validationError) => !BLOCKING_VALIDATION_FIELDS.has(validationError.field),
+            );
 
-      if (validationErrors.length > 0) {
-        for (const validationError of validationErrors) {
-          if (BLOCKING_VALIDATION_FIELDS.has(validationError.field)) {
-            shouldSkipRow = true;
-          } else {
-            switch (validationError.field) {
-              case "year":
-                normalizedRow.year = null;
-                break;
-              case "mileage_km":
-                normalizedRow.mileage_km = null;
-                break;
-              case "key_count":
-                normalizedRow.key_count = null;
-                break;
-              case "has_encumbrance":
-                normalizedRow.has_encumbrance = null;
-                break;
-              case "is_deregistered":
-                normalizedRow.is_deregistered = null;
-                break;
-              case "days_on_sale":
-                normalizedRow.days_on_sale = null;
-                break;
-              case "price":
-                normalizedRow.price = null;
-                break;
-              default:
-                break;
-            }
+      if (blockingErrors.length > 0) {
+        for (const validationError of blockingErrors) {
+          insertImportError({
+            import_batch_id: importBatchId,
+            row_number: rowNumber,
+            field: validationError.field,
+            message: validationError.message,
+          });
+
+          if (errors.length < MAX_RESPONSE_ERRORS) {
+            errors.push({
+              rowNumber,
+              field: validationError.field,
+              message: validationError.message,
+            });
+          }
+        }
+
+        skippedRows += 1;
+        return;
+      }
+
+      if (nonBlockingErrors.length > 0) {
+        for (const validationError of nonBlockingErrors) {
+          switch (validationError.field) {
+            case "year":
+              normalizedRow.year = null;
+              break;
+            case "mileage_km":
+              normalizedRow.mileage_km = null;
+              break;
+            case "key_count":
+              normalizedRow.key_count = null;
+              break;
+            case "has_encumbrance":
+              normalizedRow.has_encumbrance = null;
+              break;
+            case "is_deregistered":
+              normalizedRow.is_deregistered = null;
+              break;
+            case "days_on_sale":
+              normalizedRow.days_on_sale = null;
+              break;
+            case "price":
+              normalizedRow.price = null;
+              break;
+            default:
+              break;
           }
 
           insertImportError({
@@ -233,7 +260,7 @@ export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
         }
       }
 
-      if (shouldSkipRow || !normalizedRow.offer_code) {
+      if (!normalizedRow.offer_code) {
         skippedRows += 1;
         return;
       }

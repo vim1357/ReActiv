@@ -36,6 +36,7 @@ export interface NormalizedVehicleOfferRow {
   mileage_km_present: boolean;
   days_on_sale_present: boolean;
   is_deregistered_present: boolean;
+  price_present: boolean;
 }
 
 function getValue(
@@ -61,6 +62,7 @@ export function normalizeVehicleOfferRow(
   const rawKeyCount = getValue(row, fieldToColumnIndex, "key_count");
   const rawIsDeregistered = getValue(row, fieldToColumnIndex, "is_deregistered");
   const rawDaysOnSale = getValue(row, fieldToColumnIndex, "days_on_sale");
+  const rawPrice = getValue(row, fieldToColumnIndex, "price");
 
   const parsedKeyCount = parseKeyCount(rawKeyCount);
   const parsedHasEncumbrance = parseBoolean(getValue(row, fieldToColumnIndex, "has_encumbrance"));
@@ -84,7 +86,7 @@ export function normalizeVehicleOfferRow(
     storage_address:
       normalizeString(getValue(row, fieldToColumnIndex, "storage_address")) || null,
     days_on_sale: parseInteger(rawDaysOnSale),
-    price: parsePrice(getValue(row, fieldToColumnIndex, "price")),
+    price: parsePrice(rawPrice),
     yandex_disk_url: normalizeUrl(getValue(row, fieldToColumnIndex, "yandex_disk_url")),
     booking_status: normalizeString(getValue(row, fieldToColumnIndex, "booking_status")) || null,
     external_id: normalizeString(getValue(row, fieldToColumnIndex, "external_id")) || null,
@@ -95,5 +97,6 @@ export function normalizeVehicleOfferRow(
     mileage_km_present: Boolean(normalizeString(rawMileage)),
     days_on_sale_present: Boolean(normalizeString(rawDaysOnSale)),
     is_deregistered_present: hasDeregistrationValue,
+    price_present: Boolean(normalizeString(rawPrice)),
   };
 }
