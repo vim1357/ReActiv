@@ -8,7 +8,7 @@ Implemented:
 - Backend API on Fastify + TypeScript + SQLite.
 - Cookie-based auth (login/password, no public registration).
 - Excel import flow with Russian header mapping and row validation.
-- Import history and row-level import errors.
+- Import history, batch deltas, and row-level import diagnostics.
 - Catalog API with filtering, search, sorting, and pagination.
 - Media preview endpoints for Yandex Disk links.
 - Frontend React app with pages:
@@ -213,6 +213,7 @@ Main tables:
 - `import_batches`
 - `import_errors`
 - `vehicle_offers`
+- `vehicle_offer_snapshots`
 - `users`
 - `auth_sessions`
 
@@ -224,6 +225,34 @@ Schema is initialized on backend startup.
 - Max size: 10 MB.
 - First non-empty sheet is used.
 - Headers are normalized and mapped from Russian aliases.
+- Weekly import uses `Код предложения` (`offer_code`) as the only matching key between files.
+- `offer_code` is normalized before matching:
+  - spaces are removed;
+  - numeric values shorter than 6 chars are left-padded with zeroes;
+  - example: `22804` -> `022804`.
+- A row is treated as **critical and skipped** if:
+  - `offer_code` is empty;
+  - `brand` is empty;
+  - duplicate `offer_code` appears inside the same file.
+- Rows with non-critical data issues are still imported into the current snapshot:
+  - unsupported/empty values in soft fields (for example `price`, `mileage`, `year`) are nullified;
+  - the issue is stored in `import_errors` and shown in the upload dashboard.
+- `key_count` accepts these source forms without a warning:
+  - `1 ключ`
+  - `нет ключей`
+  - `полный комплект`
+  - empty value
+- `is_deregistered` is currently treated as “date is filled / date is empty”:
+  - any non-empty value is accepted;
+  - empty value is stored as a warning (`Не заполнена дата "Снят с учета"`).
+- New file upload does **not** destroy history:
+  - `vehicle_offers` stores the latest active snapshot only;
+  - `vehicle_offer_snapshots` stores valid rows for every import batch.
+- Batch delta is currently calculated by `offer_code` only:
+  - `added` = new offer codes in the current file;
+  - `removed` = offer codes that existed in the previous successful batch but are absent now;
+  - `unchanged` = offer codes present in both batches;
+  - field-level changes inside the same `offer_code` do not count as `updated` in MVP.
 - Sample files are available in:
   - `backend/data/sample-import.xlsx`
   - `backend/data/sample-import-unicode.xlsx`
@@ -236,7 +265,11 @@ Schema is initialized on backend startup.
    `cd backend && npm run create-user -- --login manager --password <strong-password> --name "Менеджер"`
 4. Open `http://127.0.0.1:5173/login` and sign in.
 5. Upload a valid `.xlsx` file.
-6. Confirm import summary shows total/imported/skipped rows.
+6. Confirm import summary shows:
+   - new arrivals (`added`)
+   - sold / removed (`removed`)
+   - skipped rows
+   - matched offer codes (`unchanged`)
 7. Open `/catalog` and confirm data rows are visible.
 8. Apply filters and verify results update.
 9. Open `/showcase` and check card rendering and image previews.
