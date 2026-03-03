@@ -215,6 +215,33 @@ export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
         return;
       }
 
+      if (!normalizedRow.offer_code) {
+        skippedRows += 1;
+        return;
+      }
+
+      if (seenOfferCodes.has(normalizedRow.offer_code)) {
+        const message = "Duplicate offer_code in the import file";
+
+        insertImportError({
+          import_batch_id: importBatchId,
+          row_number: rowNumber,
+          field: "offer_code",
+          message,
+        });
+
+        if (errors.length < MAX_RESPONSE_ERRORS) {
+          errors.push({
+            rowNumber,
+            field: "offer_code",
+            message,
+          });
+        }
+
+        skippedRows += 1;
+        return;
+      }
+
       if (nonBlockingErrors.length > 0) {
         for (const validationError of nonBlockingErrors) {
           switch (validationError.field) {
@@ -258,33 +285,6 @@ export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
             });
           }
         }
-      }
-
-      if (!normalizedRow.offer_code) {
-        skippedRows += 1;
-        return;
-      }
-
-      if (seenOfferCodes.has(normalizedRow.offer_code)) {
-        const message = "Duplicate offer_code in the import file";
-
-        insertImportError({
-          import_batch_id: importBatchId,
-          row_number: rowNumber,
-          field: "offer_code",
-          message,
-        });
-
-        if (errors.length < MAX_RESPONSE_ERRORS) {
-          errors.push({
-            rowNumber,
-            field: "offer_code",
-            message,
-          });
-        }
-
-        skippedRows += 1;
-        return;
       }
 
       seenOfferCodes.add(normalizedRow.offer_code);
