@@ -31,6 +31,7 @@ const ALWAYS_PUBLIC_PATHS = new Set([
 ]);
 
 const OPEN_MODE_PUBLIC_PREFIXES = [
+  "/api/catalog/summary",
   "/api/catalog/items",
   "/api/catalog/filters",
   "/api/media/preview",
