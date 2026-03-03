@@ -1802,6 +1802,40 @@ tbody tr:nth-child(even) {
   gap: 10px;
 }
 
+.showcase-meta-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.showcase-new-week-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(34, 197, 94, 0.2);
+}
+
+.showcase-new-week-badge:hover {
+  transform: none;
+  box-shadow: 0 10px 20px rgba(34, 197, 94, 0.24);
+}
+
+.showcase-new-week-badge--active {
+  background: linear-gradient(135deg, #15803d, #166534);
+  box-shadow: 0 10px 20px rgba(22, 101, 52, 0.26);
+}
+
 .showcase-detail-page {
   display: grid;
   gap: 10px;
@@ -2855,6 +2889,10 @@ tbody tr:nth-child(even) {
   .showcase-meta {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .showcase-meta-summary {
+    width: 100%;
   }
 
   .showcase-meta-controls {

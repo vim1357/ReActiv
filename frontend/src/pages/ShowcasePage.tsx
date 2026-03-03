@@ -1,6 +1,7 @@
 ﻿import { Link } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  getCatalogSummary,
   getCatalogFilters,
   getCatalogItems,
   logActivityEvent,
@@ -43,6 +44,7 @@ interface ShowcaseUiState {
   sortDir: string;
   dateSortDir: SortDirection;
   priceSortDir: SortDirection;
+  newThisWeekOnly: boolean;
   viewMode: ViewMode;
   page: number;
 }
@@ -59,6 +61,7 @@ interface FilterTrackingSnapshot {
   yearMax: number | null;
   mileageMin: number | null;
   mileageMax: number | null;
+  newThisWeekOnly: boolean;
   sortBy: string;
   sortDir: string;
 }
@@ -188,6 +191,7 @@ function createFilterTrackingSnapshot(input: {
   yearMax: string;
   mileageMin: string;
   mileageMax: string;
+  newThisWeekOnly: boolean;
   sortBy: string;
   sortDir: string;
 }): FilterTrackingSnapshot {
@@ -203,6 +207,7 @@ function createFilterTrackingSnapshot(input: {
     yearMax: toNullableNumber(input.yearMax),
     mileageMin: toNullableNumber(input.mileageMin),
     mileageMax: toNullableNumber(input.mileageMax),
+    newThisWeekOnly: input.newThisWeekOnly,
     sortBy: input.sortBy,
     sortDir: input.sortDir,
   };
@@ -243,6 +248,9 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
   const [yearMax, setYearMax] = useState(restoredState.yearMax ?? "");
   const [mileageMin, setMileageMin] = useState(restoredState.mileageMin ?? "");
   const [mileageMax, setMileageMax] = useState(restoredState.mileageMax ?? "");
+  const [newThisWeekOnly, setNewThisWeekOnly] = useState(
+    restoredState.newThisWeekOnly ?? false,
+  );
   const [sortBy, setSortBy] = useState(restoredState.sortBy ?? "created_at");
   const [sortDir, setSortDir] = useState(restoredState.sortDir ?? "desc");
   const [dateSortDir, setDateSortDir] = useState<SortDirection>(
@@ -261,6 +269,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [newThisWeekCount, setNewThisWeekCount] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -353,6 +362,27 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
   }, []);
 
   useEffect(() => {
+    async function loadCatalogSummary() {
+      try {
+        const summary = await getCatalogSummary();
+        setNewThisWeekCount(summary.newThisWeekCount);
+      } catch (caughtError) {
+        void logActivityEvent({
+          eventType: "api_error",
+          page: "/showcase",
+          payload: {
+            endpoint: "/catalog/summary",
+            message:
+              caughtError instanceof Error ? caughtError.message : "unknown_error",
+          },
+        });
+      }
+    }
+
+    void loadCatalogSummary();
+  }, []);
+
+  useEffect(() => {
     if (hasLoggedShowcaseOpenRef.current) {
       return;
     }
@@ -405,6 +435,9 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     if (mileageMax !== "") {
       queryObject.mileageMax = Number(mileageMax);
     }
+    if (newThisWeekOnly) {
+      queryObject.newThisWeek = "true";
+    }
 
     return queryObject;
   }, [
@@ -416,6 +449,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     mileageMax,
     mileageMin,
     model,
+    newThisWeekOnly,
     page,
     selectedVehicleTypes,
     sortBy,
@@ -463,6 +497,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
       yearMax,
       mileageMin,
       mileageMax,
+      newThisWeekOnly,
       sortBy,
       sortDir,
       dateSortDir,
@@ -482,6 +517,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     yearMax,
     mileageMin,
     mileageMax,
+    newThisWeekOnly,
     sortBy,
     sortDir,
     dateSortDir,
@@ -531,6 +567,9 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     if (mileageMax) {
       count += 1;
     }
+    if (newThisWeekOnly) {
+      count += 1;
+    }
     return count;
   }, [
     bookingPreset,
@@ -539,6 +578,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     mileageMax,
     mileageMin,
     model,
+    newThisWeekOnly,
     priceMax,
     priceMin,
     selectedVehicleTypes,
@@ -559,6 +599,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
       yearMax,
       mileageMin,
       mileageMax,
+      newThisWeekOnly,
       sortBy,
       sortDir,
     });
@@ -619,6 +660,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     mileageMax,
     mileageMin,
     model,
+    newThisWeekOnly,
     priceMax,
     priceMin,
     selectedVehicleTypes,
@@ -997,7 +1039,13 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     setYearMax("");
     setMileageMin("");
     setMileageMax("");
+    setNewThisWeekOnly(false);
     setPage(1);
+  }
+
+  function toggleNewThisWeekOnly(): void {
+    setPage(1);
+    setNewThisWeekOnly((current) => !current);
   }
 
   function toggleBookingPreset(nextPreset: BookingPreset): void {
@@ -1324,7 +1372,28 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
         </div>
 
         <div className="showcase-meta">
-          <strong>Найдено {total.toLocaleString("ru-RU")} позиций</strong>
+          <div className="showcase-meta-summary">
+            <strong>Найдено {total.toLocaleString("ru-RU")} позиций</strong>
+            {newThisWeekCount > 0 && (
+              <button
+                type="button"
+                className={
+                  newThisWeekOnly
+                    ? "showcase-new-week-badge showcase-new-week-badge--active"
+                    : "showcase-new-week-badge"
+                }
+                onClick={toggleNewThisWeekOnly}
+                aria-pressed={newThisWeekOnly}
+                title={
+                  newThisWeekOnly
+                    ? "Показаны только новые поступления за последнюю загрузку"
+                    : "Показать только новые поступления за последнюю загрузку"
+                }
+              >
+                +{newThisWeekCount.toLocaleString("ru-RU")} за неделю
+              </button>
+            )}
+          </div>
           <div className="showcase-meta-controls">
             <div className="showcase-sort showcase-sort--split">
               <select

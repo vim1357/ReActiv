@@ -142,17 +142,50 @@ export function clearImportedData(): ClearImportedDataResult {
 }
 
 export function getLatestSuccessfulImportBatchId(): string | null {
+  const latestBatch = getLatestSuccessfulImportBatch();
+  return latestBatch?.id ?? null;
+}
+
+export function getLatestSuccessfulImportBatch(): ImportBatchRecord | null {
   const row = db
     .prepare(
       `
-        SELECT id
+        SELECT
+          id,
+          filename,
+          status,
+          total_rows,
+          imported_rows,
+          skipped_rows,
+          added_rows,
+          updated_rows,
+          removed_rows,
+          unchanged_rows,
+          created_at
         FROM import_batches
         WHERE status IN ('completed', 'completed_with_errors')
         ORDER BY datetime(created_at) DESC, id DESC
         LIMIT 1
       `,
     )
-    .get() as { id: string } | undefined;
+    .get() as ImportBatchRecord | undefined;
+
+  return row ?? null;
+}
+
+export function getPreviousSuccessfulImportBatchId(excludedImportBatchId: string): string | null {
+  const row = db
+    .prepare(
+      `
+        SELECT id
+        FROM import_batches
+        WHERE status IN ('completed', 'completed_with_errors')
+          AND id != ?
+        ORDER BY datetime(created_at) DESC, id DESC
+        LIMIT 1
+      `,
+    )
+    .get(excludedImportBatchId) as { id: string } | undefined;
 
   return row?.id ?? null;
 }

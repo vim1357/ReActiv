@@ -319,3 +319,18 @@ export function backfillVehicleOfferSnapshotsIfEmpty(): void {
     FROM vehicle_offers
   `);
 }
+
+export function listVehicleOfferSnapshotCodesByImportBatchId(importBatchId: string): string[] {
+  const rows = db
+    .prepare(
+      `
+        SELECT DISTINCT offer_code
+        FROM vehicle_offer_snapshots
+        WHERE import_batch_id = ?
+          AND TRIM(COALESCE(offer_code, '')) != ''
+      `,
+    )
+    .all(importBatchId) as Array<{ offer_code: string }>;
+
+  return rows.map((row) => row.offer_code);
+}

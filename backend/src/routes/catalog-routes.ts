@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 import { parseCatalogQuery } from "../catalog/catalog-query";
+import { getLatestSuccessfulImportBatch } from "../repositories/import-batch-repository";
 import {
   findCatalogItemById,
   getCatalogFiltersMetadata,
@@ -44,6 +45,18 @@ function sanitizeCatalogFiltersForRole(
 }
 
 export async function registerCatalogRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/api/catalog/summary", async (_request, reply) => {
+    try {
+      const latestImportBatch = getLatestSuccessfulImportBatch();
+
+      return reply.code(200).send({
+        newThisWeekCount: latestImportBatch?.added_rows ?? 0,
+      });
+    } catch {
+      return reply.code(500).send({ message: "Failed to fetch catalog summary" });
+    }
+  });
+
   app.get("/api/catalog/items", async (request, reply) => {
     try {
       const query = parseCatalogQuery(request.query);

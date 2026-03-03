@@ -1,5 +1,10 @@
 import { db } from "../db/connection";
 import type { CatalogQuery } from "../catalog/catalog-query";
+import {
+  getLatestSuccessfulImportBatch,
+  getPreviousSuccessfulImportBatchId,
+} from "./import-batch-repository";
+import { listVehicleOfferSnapshotCodesByImportBatchId } from "./vehicle-offer-repository";
 
 interface VehicleOfferDbRow {
   id: number;
@@ -315,6 +320,25 @@ function filterRowsByRegions(
   });
 }
 
+function filterRowsByNewThisWeek(rows: VehicleOfferDbRow[]): VehicleOfferDbRow[] {
+  const latestImportBatch = getLatestSuccessfulImportBatch();
+  if (!latestImportBatch) {
+    return [];
+  }
+
+  const currentRows = rows.filter((row) => row.import_batch_id === latestImportBatch.id);
+  const previousImportBatchId = getPreviousSuccessfulImportBatchId(latestImportBatch.id);
+  if (!previousImportBatchId) {
+    return currentRows;
+  }
+
+  const previousOfferCodes = new Set(
+    listVehicleOfferSnapshotCodesByImportBatchId(previousImportBatchId),
+  );
+
+  return currentRows.filter((row) => !previousOfferCodes.has(row.offer_code));
+}
+
 function buildWhere(filters: CatalogQuery): { whereClause: string; params: unknown[] } {
   const clauses: string[] = [];
   const params: unknown[] = [];
@@ -415,6 +439,7 @@ export function searchCatalogItems(filters: CatalogQuery): {
   const { whereClause, params } = buildWhere(filters);
   const requestedRegions = normalizeRequestedRegions(filters.city);
   const shouldFilterByRegion = requestedRegions.size > 0;
+  const shouldFilterByNewThisWeek = filters.newThisWeek === true;
   const limit = filters.pageSize;
   const offset = (filters.page - 1) * filters.pageSize;
 
@@ -440,9 +465,15 @@ export function searchCatalogItems(filters: CatalogQuery): {
       ${filters.sortBy} ${filters.sortDir.toUpperCase()}
   `;
 
-  if (shouldFilterByRegion) {
+  if (shouldFilterByRegion || shouldFilterByNewThisWeek) {
     const rows = db.prepare(baseSelectQuery).all(...params) as VehicleOfferDbRow[];
-    const filteredRows = filterRowsByRegions(rows, requestedRegions);
+    let filteredRows = rows;
+    if (shouldFilterByRegion) {
+      filteredRows = filterRowsByRegions(filteredRows, requestedRegions);
+    }
+    if (shouldFilterByNewThisWeek) {
+      filteredRows = filterRowsByNewThisWeek(filteredRows);
+    }
     const paginatedRows = filteredRows.slice(offset, offset + limit);
 
     return {

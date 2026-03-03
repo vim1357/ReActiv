@@ -134,6 +134,10 @@ export interface CatalogItemsResponse {
   };
 }
 
+export interface CatalogSummaryResponse {
+  newThisWeekCount: number;
+}
+
 export interface CatalogFiltersResponse {
   offerCode: string[];
   status: string[];

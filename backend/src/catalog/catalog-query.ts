@@ -52,12 +52,29 @@ function toOptionalBooleanArray(value: unknown): boolean[] | undefined {
   return parsed.length ? parsed : undefined;
 }
 
+function toOptionalBoolean(value: unknown): boolean | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return undefined;
+}
+
 const arrayField = z.preprocess(toStringArray, z.array(z.string()).optional());
 const numberField = z.preprocess(toOptionalNumber, z.number().optional());
 const booleanArrayField = z.preprocess(
   toOptionalBooleanArray,
   z.array(z.boolean()).optional(),
 );
+const booleanField = z.preprocess(toOptionalBoolean, z.boolean().optional());
 
 const catalogQuerySchema = z.object({
   offerCode: arrayField,
@@ -78,6 +95,7 @@ const catalogQuerySchema = z.object({
   websiteUrl: arrayField,
   yandexDiskUrl: arrayField,
   search: z.preprocess((value) => toStringArray(value)?.[0], z.string().optional()),
+  newThisWeek: booleanField,
   sortBy: z
     .enum(["created_at", "price", "year", "mileage_km", "days_on_sale"])
     .default("created_at"),

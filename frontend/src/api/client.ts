@@ -11,6 +11,7 @@ import type {
   ImportBatchDetailsResponse,
   CatalogFiltersResponse,
   CatalogItemsResponse,
+  CatalogSummaryResponse,
   ImportResponse,
   PlatformMode,
   PlatformModeResponse,
@@ -618,6 +619,25 @@ export async function getCatalogItems(
     }
 
     return (await response.json()) as CatalogItemsResponse;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw backendUnavailableError();
+    }
+    throw error;
+  }
+}
+
+export async function getCatalogSummary(): Promise<CatalogSummaryResponse> {
+  try {
+    const response = await fetch(buildUrl("/catalog/summary"), {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error("Не удалось загрузить сводку витрины");
+    }
+
+    return (await response.json()) as CatalogSummaryResponse;
   } catch (error) {
     if (error instanceof TypeError) {
       throw backendUnavailableError();
