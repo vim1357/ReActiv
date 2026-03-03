@@ -154,14 +154,9 @@ export function App() {
 
   if (authState === "checking" || platformMode === "checking") {
     return (
-      <>
-        <div className="app">
-          <div className="panel">
-            <h2>Проверка сессии...</h2>
-          </div>
-        </div>
-        <FeedbackWidget />
-      </>
+      <div className="app-loading-screen" aria-live="polite" aria-label="Loading session">
+        <div className="app-loading-screen__spinner" aria-hidden="true" />
+      </div>
     );
   }
 
