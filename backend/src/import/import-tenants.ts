@@ -18,7 +18,7 @@ const RESO_HEADER_OVERRIDES: Partial<HeaderAliases> = {
   brand: ["Предмет лизинга.Марка"],
   model: ["Предмет лизинга.Модель"],
   modification: ["Предмет лизинга.Тип предмета лизинга"],
-  vehicle_type: ["Предмет лизинга.Тип транспортного средства"],
+  vehicle_type: ["Предмет лизинга.Тип предмета лизинга"],
   year: ["Год выпуска"],
   mileage_km: ["Пробег (м/ч)"],
   is_deregistered: ["Дата снятия с учета"],
@@ -72,4 +72,3 @@ export function parseImportTenantId(
   }
   return null;
 }
-
