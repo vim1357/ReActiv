@@ -14,7 +14,10 @@ import { getPlatformMode } from "./repositories/platform-settings-repository";
 import { authenticateRequest } from "./services/auth-service";
 import { ensureBootstrapAdmin } from "./startup/bootstrap-admin";
 
-const app = Fastify({ logger: true });
+const app = Fastify({
+  logger: true,
+  bodyLimit: 20 * 1024 * 1024,
+});
 
 app.get("/health", async () => {
   return { status: "ok" };
@@ -55,7 +58,12 @@ async function startServer(): Promise<void> {
     credentials: true,
   });
   await app.register(cookie);
-  await app.register(multipart);
+  await app.register(multipart, {
+    limits: {
+      fileSize: 20 * 1024 * 1024,
+      files: 1,
+    },
+  });
   await registerAuthRoutes(app);
   await registerPlatformRoutes(app);
 

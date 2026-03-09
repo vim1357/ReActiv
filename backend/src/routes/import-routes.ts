@@ -8,7 +8,7 @@ import { parseImportTenantId } from "../import/import-tenants";
 import { getImportErrorsByBatchId } from "../repositories/import-error-repository";
 import { importWorkbook } from "../services/import-service";
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
 function rejectIfNoImportAccess(
   request: FastifyRequest,
@@ -71,6 +71,11 @@ export async function registerImportRoutes(app: FastifyInstance): Promise<void> 
 
     const chunks: Buffer[] = [];
     let size = 0;
+    let isTruncated = false;
+
+    file.file.on("limit", () => {
+      isTruncated = true;
+    });
 
     for await (const chunk of file.file) {
       const bufferChunk = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
@@ -79,6 +84,16 @@ export async function registerImportRoutes(app: FastifyInstance): Promise<void> 
         return reply.code(400).send({ message: "File exceeds 10MB limit" });
       }
       chunks.push(bufferChunk);
+    }
+
+    if (isTruncated || file.file.truncated) {
+      return reply.code(400).send({
+        message: "File is too large or upload was truncated. Max size is 20MB.",
+      });
+    }
+
+    if (size === 0) {
+      return reply.code(400).send({ message: "Uploaded file is empty" });
     }
 
     const fileBuffer = Buffer.concat(chunks);
@@ -94,9 +109,19 @@ export async function registerImportRoutes(app: FastifyInstance): Promise<void> 
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Import failed";
+
+      if (typeof message === "string" && message.includes("Bad compressed size")) {
+        return reply.code(400).send({
+          message:
+            "Файл поврежден или загрузился не полностью. Повторите загрузку. Если ошибка повторяется, переформируйте .xlsx и загрузите снова.",
+        });
+      }
+
       app.log.error(
         {
           filename: file.filename,
+          bytes_received: size,
+          is_truncated: isTruncated || file.file.truncated,
           message,
         },
         "import_request_failed",
