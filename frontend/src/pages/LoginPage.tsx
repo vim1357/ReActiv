@@ -24,13 +24,13 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isSignInMode = useMemo(() => {
+  const isRegistrationMode = useMemo(() => {
     if (location.pathname === HIDDEN_ADMIN_LOGIN_PATH) {
-      return true;
+      return false;
     }
 
     const params = new URLSearchParams(location.search);
-    return params.get("mode") === "signin";
+    return params.get("mode") === "registration";
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -49,13 +49,13 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       page: location.pathname,
       payload: {
         source: stateSource ?? "direct",
-        mode: isSignInMode ? "signin" : "registration",
+        mode: isRegistrationMode ? "registration" : "signin",
       },
     });
-  }, [isSignInMode, location.pathname, location.state]);
+  }, [isRegistrationMode, location.pathname, location.state]);
 
   useEffect(() => {
-    if (isSignInMode || typeof document === "undefined") {
+    if (!isRegistrationMode || typeof document === "undefined") {
       return;
     }
 
@@ -70,7 +70,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     script.src = REGISTRATION_FORM_SCRIPT_SRC;
     script.async = true;
     document.body.appendChild(script);
-  }, [isSignInMode]);
+  }, [isRegistrationMode]);
 
   function resetShowcaseState(): void {
     if (typeof window === "undefined") {
@@ -131,7 +131,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   return (
     <section className="auth-layout auth-layout--landing">
-      <div className={`auth-shell${isSignInMode ? "" : " auth-shell--registration"}`}>
+      <div className={`auth-shell${isRegistrationMode ? " auth-shell--registration" : ""}`}>
         <Link to="/showcase" className="auth-top-logo" onClick={resetShowcaseState}>
           Ре<span>Актив</span>
         </Link>
@@ -142,7 +142,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <span className="auth-top-nav__link is-active">Личный кабинет для ЮЛ</span>
         </nav>
 
-        {isSignInMode ? (
+        {!isRegistrationMode ? (
           <div className="auth-landing-grid">
             <div className="panel auth-panel auth-panel--landing">
               <h1>Личный кабинет</h1>
@@ -170,7 +170,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 </button>
                 <div className="auth-access-callout auth-access-callout--landing">
                   <p>Доступ к личному кабинету есть только у зарегистрированных партнеров</p>
-                  <Link className="auth-access-callout__link" to="/login">
+                  <Link className="auth-access-callout__link" to="/login?mode=registration">
                     Получить доступ к платформе →
                   </Link>
                 </div>
@@ -215,7 +215,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 />
               </div>
               <p className="auth-registration-switch">
-                Уже зарегистрированы? <Link to="/login?mode=signin">Войти</Link>
+                Уже зарегистрированы? <Link to="/login">Войти</Link>
               </p>
               <p className="auth-legal-note auth-legal-note--registration">
                 Продолжая, вы соглашаетесь с <PrivacyPolicyLink /> и <TermsLink />.
