@@ -537,7 +537,7 @@ a {
 .feedback-widget {
   position: fixed;
   right: 26px;
-  bottom: 24px;
+  bottom: 112px;
   z-index: 1400;
   display: grid;
   justify-items: end;
@@ -3065,7 +3065,7 @@ tbody tr:nth-child(even) {
 
   .feedback-widget {
     right: 12px;
-    bottom: 12px;
+    bottom: 92px;
     gap: 10px;
   }
 
