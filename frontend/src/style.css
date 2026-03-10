@@ -443,7 +443,7 @@ a {
   border: 1px solid #d9e1ed;
   border-radius: 22px;
   background: #ffffff;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   width: 650px;
   max-width: 100%;
@@ -451,21 +451,14 @@ a {
 }
 
 .auth-registration-form-frame::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 84px;
-  background: #ffffff;
-  pointer-events: none;
+  display: none;
 }
 
 .auth-registration-iframe {
   width: 650px;
   max-width: 100%;
-  min-height: 560px !important;
-  height: 560px !important;
+  min-height: 760px;
+  height: 760px;
   display: block;
 }
 
@@ -2851,8 +2844,8 @@ tbody tr:nth-child(even) {
   }
 
   .auth-registration-iframe {
-    min-height: 560px !important;
-    height: 560px !important;
+    min-height: 760px;
+    height: 760px;
   }
 
   .catalog-layout {
@@ -3314,8 +3307,8 @@ tbody tr:nth-child(even) {
 
   .auth-registration-iframe {
     width: 100%;
-    min-height: 620px !important;
-    height: 620px !important;
+    min-height: 860px;
+    height: 860px;
   }
 
   .auth-registration-switch,
