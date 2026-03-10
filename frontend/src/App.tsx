@@ -229,10 +229,7 @@ export function App() {
 
     if (platformMode === "open") {
       const shouldShowPublicHeader =
-        location.pathname === "/" ||
-        location.pathname === "/showcase" ||
-        location.pathname === "/login" ||
-        location.pathname === HIDDEN_ADMIN_LOGIN_PATH;
+        location.pathname === "/" || location.pathname === "/showcase";
 
       return (
         <>
