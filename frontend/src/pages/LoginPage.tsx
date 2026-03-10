@@ -133,24 +133,27 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               <button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Вход..." : "Войти"}
               </button>
-              <a
-                className="auth-request-button auth-request-button--landing"
-                href="https://t.me/romanodokienko"
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => {
-                  void logActivityEvent({
-                    eventType: "showcase_contact_click",
-                    page: location.pathname,
-                    payload: {
-                      source: "login_request_access",
-                      channel: "telegram",
-                    },
-                  });
-                }}
-              >
-                Запросить доступ к платформе
-              </a>
+              <div className="auth-access-callout auth-access-callout--landing">
+                <p>Доступ к личному кабинету есть только у зарегистрированных партнеров</p>
+                <a
+                  className="auth-access-callout__link"
+                  href="https://t.me/romanodokienko"
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => {
+                    void logActivityEvent({
+                      eventType: "showcase_contact_click",
+                      page: location.pathname,
+                      payload: {
+                        source: "login_request_access",
+                        channel: "telegram",
+                      },
+                    });
+                  }}
+                >
+                  Получить доступ к платформе →
+                </a>
+              </div>
               <p className="auth-legal-note">
                 {"\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u044f, \u0432\u044b \u0441\u043e\u0433\u043b\u0430\u0448\u0430\u0435\u0442\u0435\u0441\u044c \u0441 "}
                 <PrivacyPolicyLink />
