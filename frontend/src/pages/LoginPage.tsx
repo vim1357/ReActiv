@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { logActivityEvent, login } from "../api/client";
@@ -12,6 +12,10 @@ interface LoginPageProps {
 const SHOWCASE_UI_STATE_KEY = "showcase_ui_state_v1";
 const SHOWCASE_RETURN_FLAG_KEY = "showcase_return_pending_v1";
 const SHOWCASE_SCROLL_Y_KEY = "showcase_scroll_y_v1";
+const HIDDEN_ADMIN_LOGIN_PATH = "/staff-login-reactiv";
+const REGISTRATION_FORM_SCRIPT_SRC = "https://forms.yandex.ru/_static/embed.js";
+const REGISTRATION_FORM_IFRAME_SRC =
+  "https://forms.yandex.ru/u/69afbe1e84227c93c7f0d9e2?iframe=1";
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const location = useLocation();
@@ -19,6 +23,15 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isSignInMode = useMemo(() => {
+    if (location.pathname === HIDDEN_ADMIN_LOGIN_PATH) {
+      return true;
+    }
+
+    const params = new URLSearchParams(location.search);
+    return params.get("mode") === "signin";
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     document.body.classList.add("auth-page");
@@ -36,9 +49,28 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       page: location.pathname,
       payload: {
         source: stateSource ?? "direct",
+        mode: isSignInMode ? "signin" : "registration",
       },
     });
-  }, [location.pathname, location.state]);
+  }, [isSignInMode, location.pathname, location.state]);
+
+  useEffect(() => {
+    if (isSignInMode || typeof document === "undefined") {
+      return;
+    }
+
+    const existingScript = document.querySelector(
+      `script[src="${REGISTRATION_FORM_SCRIPT_SRC}"]`,
+    );
+    if (existingScript) {
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = REGISTRATION_FORM_SCRIPT_SRC;
+    script.async = true;
+    document.body.appendChild(script);
+  }, [isSignInMode]);
 
   function resetShowcaseState(): void {
     if (typeof window === "undefined") {
@@ -99,93 +131,98 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   return (
     <section className="auth-layout auth-layout--landing">
-      <div className="auth-shell">
+      <div className={`auth-shell${isSignInMode ? "" : " auth-shell--registration"}`}>
         <Link to="/showcase" className="auth-top-logo" onClick={resetShowcaseState}>
-          {"\u0420\u0435"}
-          <span>{"\u0410\u043a\u0442\u0438\u0432"}</span>
+          Ре<span>Актив</span>
         </Link>
-        <nav className="auth-top-nav" aria-label="Навигация входа">
-          <Link
-            to="/showcase"
-            className="auth-top-nav__link"
-            onClick={resetShowcaseState}
-          >
+        <nav className="auth-top-nav" aria-label="Навигация личного кабинета">
+          <Link to="/showcase" className="auth-top-nav__link" onClick={resetShowcaseState}>
             Каталог техники
           </Link>
           <span className="auth-top-nav__link is-active">Личный кабинет для ЮЛ</span>
         </nav>
 
-        <div className="auth-landing-grid">
-          <div className="panel auth-panel auth-panel--landing">
-            <h1>Личный кабинет</h1>
-            <form className="auth-form auth-form--landing" onSubmit={handleSubmit}>
-              <label className="field">
-                <span>Логин</span>
-                <input
-                  type="text"
-                  autoComplete="username"
-                  value={loginValue}
-                  onChange={(event) => setLoginValue(event.target.value)}
-                />
-              </label>
-              <label className="field">
-                <span>Пароль</span>
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </label>
-              <button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Вход..." : "Войти"}
-              </button>
-              <div className="auth-access-callout auth-access-callout--landing">
-                <p>Доступ к личному кабинету есть только у зарегистрированных партнеров</p>
-                <a
-                  className="auth-access-callout__link"
-                  href="https://t.me/romanodokienko"
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => {
-                    void logActivityEvent({
-                      eventType: "showcase_contact_click",
-                      page: location.pathname,
-                      payload: {
-                        source: "login_request_access",
-                        channel: "telegram",
-                      },
-                    });
-                  }}
-                >
-                  Получить доступ к платформе →
-                </a>
-              </div>
-              <p className="auth-legal-note">
-                {"\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u044f, \u0432\u044b \u0441\u043e\u0433\u043b\u0430\u0448\u0430\u0435\u0442\u0435\u0441\u044c \u0441 "}
-                <PrivacyPolicyLink />
-                {" \u0438 "}
-                <TermsLink />.
-              </p>
-            </form>
-            {error && <p className="error">{error}</p>}
-          </div>
+        {isSignInMode ? (
+          <div className="auth-landing-grid">
+            <div className="panel auth-panel auth-panel--landing">
+              <h1>Личный кабинет</h1>
+              <form className="auth-form auth-form--landing" onSubmit={handleSubmit}>
+                <label className="field">
+                  <span>Логин</span>
+                  <input
+                    type="text"
+                    autoComplete="username"
+                    value={loginValue}
+                    onChange={(event) => setLoginValue(event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Пароль</span>
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </label>
+                <button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Вход..." : "Войти"}
+                </button>
+                <div className="auth-access-callout auth-access-callout--landing">
+                  <p>Доступ к личному кабинету есть только у зарегистрированных партнеров</p>
+                  <Link className="auth-access-callout__link" to="/login">
+                    Получить доступ к платформе →
+                  </Link>
+                </div>
+                <p className="auth-legal-note">
+                  Продолжая, вы соглашаетесь с <PrivacyPolicyLink /> и <TermsLink />.
+                </p>
+              </form>
+              {error && <p className="error">{error}</p>}
+            </div>
 
-          <aside className="auth-promo-card" aria-label="Преимущества платформы">
-            <div className="auth-promo-card__image" aria-hidden="true" />
-            <h2>Единый агрегатор изъятой лизинговой техники</h2>
-            <ul className="auth-promo-list">
-              <li>
-                <strong>Лизинговым компаниям</strong>
-                <p>Витрина для размещения и реализации стока</p>
-              </li>
-              <li>
-                <strong>Дилерам, юрлицам и агентам</strong>
-                <p>Прямой доступ к актуальной базе изъятой техники от крупных компаний РФ</p>
-              </li>
-            </ul>
-          </aside>
-        </div>
+            <aside className="auth-promo-card" aria-label="Преимущества платформы">
+              <div className="auth-promo-card__image" aria-hidden="true" />
+              <h2>Единый агрегатор изъятой лизинговой техники</h2>
+              <ul className="auth-promo-list">
+                <li>
+                  <strong>Лизинговым компаниям</strong>
+                  <p>Витрина для размещения и реализации стока</p>
+                </li>
+                <li>
+                  <strong>Дилерам, юрлицам и агентам</strong>
+                  <p>
+                    Прямой доступ к актуальной базе изъятой техники от крупнейших компаний РФ
+                  </p>
+                </li>
+              </ul>
+            </aside>
+          </div>
+        ) : (
+          <div className="auth-registration-layout">
+            <div className="panel auth-panel auth-panel--registration">
+              <h1>Регистрация для владельцев лотов</h1>
+              <p className="auth-registration-subtitle">
+                Заполните форму, и мы отправим данные для доступа в личный кабинет.
+              </p>
+              <div className="auth-registration-form-frame">
+                <iframe
+                  src={REGISTRATION_FORM_IFRAME_SRC}
+                  frameBorder="0"
+                  name="ya-form-69afbe1e84227c93c7f0d9e2"
+                  title="Форма регистрации владельца лотов"
+                  className="auth-registration-iframe"
+                />
+              </div>
+              <p className="auth-registration-switch">
+                Уже зарегистрированы? <Link to="/login?mode=signin">Войти</Link>
+              </p>
+              <p className="auth-legal-note auth-legal-note--registration">
+                Продолжая, вы соглашаетесь с <PrivacyPolicyLink /> и <TermsLink />.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

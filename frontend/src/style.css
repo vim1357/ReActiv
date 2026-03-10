@@ -303,6 +303,10 @@ a {
   gap: 0;
 }
 
+.auth-shell--registration {
+  width: min(100%, 760px);
+}
+
 .auth-top-logo {
   position: fixed;
   top: 28px;
@@ -362,6 +366,11 @@ a {
   justify-content: center;
 }
 
+.auth-registration-layout {
+  display: grid;
+  justify-items: center;
+}
+
 .auth-panel.auth-panel--landing {
   width: 400px;
   min-height: 400px;
@@ -379,6 +388,62 @@ a {
   font-size: 28px;
   line-height: 32px;
   letter-spacing: -0.015em;
+}
+
+.auth-panel.auth-panel--registration {
+  width: min(100%, 680px);
+  border-radius: 20px;
+  border: 0;
+  box-shadow: none;
+  background: #ffffff;
+  padding: 28px;
+  margin: 0;
+}
+
+.auth-panel--registration h1 {
+  margin: 0 0 12px;
+  color: #1f242b;
+  font-size: clamp(34px, 4vw, 46px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+
+.auth-registration-subtitle {
+  margin: 0;
+  color: #66788f;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.auth-registration-form-frame {
+  margin-top: 20px;
+  border: 1px solid #d8e2ef;
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.auth-registration-iframe {
+  width: 100%;
+  min-height: 840px;
+  display: block;
+}
+
+.auth-registration-switch {
+  margin: 16px 0 0;
+  color: #66788f;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.auth-registration-switch a {
+  color: #2b60d0;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-registration-switch a:hover {
+  text-decoration: underline;
 }
 
 .auth-form {
@@ -536,6 +601,10 @@ a {
   color: #6a7280;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.auth-legal-note--registration {
+  margin-top: 8px;
 }
 
 .auth-promo-card {
@@ -2676,6 +2745,10 @@ tbody tr:nth-child(even) {
     width: 100%;
   }
 
+  .auth-shell--registration {
+    width: 100%;
+  }
+
   .auth-top-logo {
     position: static;
     top: auto;
@@ -2701,6 +2774,14 @@ tbody tr:nth-child(even) {
     width: min(100%, 400px);
     height: auto;
     min-height: 400px;
+  }
+
+  .auth-panel.auth-panel--registration {
+    width: min(100%, 680px);
+  }
+
+  .auth-registration-iframe {
+    min-height: 780px;
   }
 
   .catalog-layout {
@@ -3128,6 +3209,29 @@ tbody tr:nth-child(even) {
     padding: 20px 16px;
     border-radius: 18px;
     min-height: 0;
+  }
+
+  .auth-panel.auth-panel--registration {
+    padding: 20px 16px;
+    border-radius: 18px;
+  }
+
+  .auth-panel--registration h1 {
+    font-size: clamp(28px, 8vw, 36px);
+    line-height: 1.12;
+  }
+
+  .auth-registration-subtitle {
+    font-size: 15px;
+  }
+
+  .auth-registration-form-frame {
+    margin-top: 16px;
+    border-radius: 14px;
+  }
+
+  .auth-registration-iframe {
+    min-height: 720px;
   }
 
   .auth-form {
