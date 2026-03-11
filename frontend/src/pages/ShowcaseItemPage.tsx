@@ -104,13 +104,6 @@ function formatInteger(value: number | null, suffix = ""): string {
   return suffix ? `${formatted} ${suffix}` : formatted;
 }
 
-function buildShareMessage(item: CatalogItem): string {
-  const baseName = item.title.trim() || `${item.brand} ${item.model}`.trim() || "лот";
-  const carWithYear = item.year ? `${baseName} ${item.year} года` : baseName;
-  const priceText = item.price === null ? "цену по запросу" : `${item.price.toLocaleString("ru-RU")} ₽`;
-  return `Смотрите, какая машина: ${carWithYear} за ${priceText} на платформе РеАктив!`;
-}
-
 interface DetailSpec {
   label: string;
   value: string;
@@ -243,7 +236,7 @@ export function ShowcaseItemPage() {
     : "Добрый день. Вопрос по лоту";
   const encodedContactMessage = encodeURIComponent(contactMessage);
   const encodedMailSubject = encodeURIComponent(`Вопрос по лоту ${item?.offerCode ?? ""}`.trim());
-  const telegramShareUrl = item ? buildTelegramShareUrl(item.id, buildShareMessage(item)) : "#";
+  const telegramShareUrl = item ? buildTelegramShareUrl(item.id) : "#";
   const cameFromShowcase = Boolean(
     (location.state as { fromShowcase?: boolean } | null)?.fromShowcase,
   );

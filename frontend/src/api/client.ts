@@ -50,10 +50,9 @@ export function buildPublicShareUrl(itemId: number): string {
   return `https://api.reactiv.pro/showcase/${itemId}`;
 }
 
-export function buildTelegramShareUrl(itemId: number, message: string): string {
+export function buildTelegramShareUrl(itemId: number): string {
   const shareUrl = encodeURIComponent(buildPublicShareUrl(itemId));
-  const encodedMessage = encodeURIComponent(message);
-  return `https://t.me/share/url?url=${shareUrl}&text=${encodedMessage}`;
+  return `https://t.me/share/url?url=${shareUrl}`;
 }
 
 function createActivitySessionId(): string {
