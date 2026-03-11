@@ -1,10 +1,13 @@
-import type { FastifyInstance } from "fastify";
+﻿import type { FastifyInstance } from "fastify";
 import { findCatalogItemById } from "../repositories/catalog-repository";
+import { resolvePreviewUrl } from "../services/media-preview-service";
 
 const DEFAULT_WEB_BASE_URL = "https://reactiv.pro";
 const DEFAULT_SHARE_BASE_URL = "https://api.reactiv.pro";
 const FALLBACK_PREVIEW_IMAGE_PATH = "/android-chrome-512x512.png";
 const SHARE_DESCRIPTION = "Опубликовано на РеАктив";
+const BOT_USER_AGENT_PATTERN =
+  /(telegrambot|twitterbot|facebookexternalhit|vkshare|viber|whatsapp|discordbot|slackbot|linkedinbot|googlebot|yandexbot|bingbot)/i;
 
 function trimTrailingSlashes(value: string): string {
   return value.replace(/\/+$/, "");
@@ -18,12 +21,20 @@ function resolveShareBaseUrl(): string {
   return trimTrailingSlashes(process.env.PUBLIC_SHARE_BASE_URL ?? DEFAULT_SHARE_BASE_URL);
 }
 
+function isCrawlerRequest(userAgent: string | undefined): boolean {
+  if (!userAgent) {
+    return false;
+  }
+
+  return BOT_USER_AGENT_PATTERN.test(userAgent);
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
@@ -62,7 +73,7 @@ function buildCarNameForShare(item: {
   return `${baseName} ${item.year} года`;
 }
 
-async function resolvePreviewImageUrl(yandexDiskUrl: string): Promise<string | null> {
+async function resolvePreviewImageSourceUrl(yandexDiskUrl: string): Promise<string | null> {
   const firstMediaUrl = extractMediaUrls(yandexDiskUrl)[0];
   if (!firstMediaUrl) {
     return null;
@@ -71,19 +82,35 @@ async function resolvePreviewImageUrl(yandexDiskUrl: string): Promise<string | n
   return firstMediaUrl;
 }
 
+async function resolvePreviewImageUrlForShare(args: {
+  itemId: number;
+  yandexDiskUrl: string;
+  webBaseUrl: string;
+  shareBaseUrl: string;
+}): Promise<string> {
+  const sourceUrl = await resolvePreviewImageSourceUrl(args.yandexDiskUrl);
+  if (!sourceUrl) {
+    return `${args.webBaseUrl}${FALLBACK_PREVIEW_IMAGE_PATH}`;
+  }
+
+  const resolved = await resolvePreviewUrl(sourceUrl);
+  if (!resolved.previewUrl) {
+    return `${args.webBaseUrl}${FALLBACK_PREVIEW_IMAGE_PATH}`;
+  }
+
+  return `${args.shareBaseUrl}/showcase/${args.itemId}/preview-image`;
+}
+
 function buildShareHtml(args: {
   title: string;
   description: string;
   shareUrl: string;
   imageUrl: string;
-  redirectUrl: string;
 }): string {
   const title = escapeHtml(args.title);
   const description = escapeHtml(args.description);
   const shareUrl = escapeHtml(args.shareUrl);
   const imageUrl = escapeHtml(args.imageUrl);
-  const redirectUrl = escapeHtml(args.redirectUrl);
-  const redirectScriptUrl = JSON.stringify(args.redirectUrl);
 
   return `<!doctype html>
 <html lang="ru">
@@ -103,17 +130,61 @@ function buildShareHtml(args: {
     <meta name="twitter:title" content="${title}" />
     <meta name="twitter:description" content="${description}" />
     <meta name="twitter:image" content="${imageUrl}" />
-    <link rel="canonical" href="${redirectUrl}" />
-    <meta http-equiv="refresh" content="0;url=${redirectUrl}" />
   </head>
   <body>
-    <p>Переадресация на карточку лота...</p>
-    <script>window.location.replace(${redirectScriptUrl});</script>
+    <p>Preview metadata page.</p>
   </body>
 </html>`;
 }
 
+function fallbackImageUrl(): string {
+  return `${resolveWebBaseUrl()}${FALLBACK_PREVIEW_IMAGE_PATH}`;
+}
+
 export async function registerShareRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/showcase/:id/preview-image", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parsedId = Number(id);
+
+    if (!Number.isInteger(parsedId) || parsedId <= 0) {
+      return reply.code(400).type("text/plain; charset=utf-8").send("Invalid showcase item id");
+    }
+
+    const item = findCatalogItemById(parsedId);
+    if (!item) {
+      return reply.code(404).type("text/plain; charset=utf-8").send("Catalog item not found");
+    }
+
+    const sourceUrl = await resolvePreviewImageSourceUrl(item.yandexDiskUrl);
+    if (!sourceUrl) {
+      return reply.redirect(fallbackImageUrl(), 302);
+    }
+
+    const resolved = await resolvePreviewUrl(sourceUrl);
+    if (!resolved.previewUrl) {
+      return reply.redirect(fallbackImageUrl(), 302);
+    }
+
+    try {
+      const imageResponse = await fetch(resolved.previewUrl, { method: "GET" });
+      if (!imageResponse.ok) {
+        return reply.redirect(fallbackImageUrl(), 302);
+      }
+
+      const contentType = imageResponse.headers.get("content-type") ?? "image/jpeg";
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      return reply
+        .code(200)
+        .header("Content-Type", contentType)
+        .header("Cache-Control", "public, max-age=600")
+        .send(buffer);
+    } catch {
+      return reply.redirect(fallbackImageUrl(), 302);
+    }
+  });
+
   app.get("/showcase/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     const parsedId = Number(id);
@@ -130,11 +201,23 @@ export async function registerShareRoutes(app: FastifyInstance): Promise<void> {
     const webBaseUrl = resolveWebBaseUrl();
     const shareBaseUrl = resolveShareBaseUrl();
     const redirectUrl = `${webBaseUrl}/showcase/${item.id}`;
+
+    const rawUserAgent = request.headers["user-agent"];
+    const userAgent = Array.isArray(rawUserAgent)
+      ? rawUserAgent.join(" ")
+      : rawUserAgent;
+
+    if (!isCrawlerRequest(userAgent)) {
+      return reply.redirect(redirectUrl, 302);
+    }
+
     const shareUrl = `${shareBaseUrl}/showcase/${item.id}`;
-    const previewSourceUrl = await resolvePreviewImageUrl(item.yandexDiskUrl);
-    const previewImageUrl = previewSourceUrl
-      ? `${shareBaseUrl}/api/media/preview-image?url=${encodeURIComponent(previewSourceUrl)}`
-      : `${webBaseUrl}${FALLBACK_PREVIEW_IMAGE_PATH}`;
+    const previewImageUrl = await resolvePreviewImageUrlForShare({
+      itemId: item.id,
+      yandexDiskUrl: item.yandexDiskUrl,
+      webBaseUrl,
+      shareBaseUrl,
+    });
     const title = `Смотрите, какая машина: ${buildCarNameForShare(item)} за ${formatPriceForShare(item.price)} на платформе РеАктив!`;
 
     const html = buildShareHtml({
@@ -142,9 +225,12 @@ export async function registerShareRoutes(app: FastifyInstance): Promise<void> {
       description: SHARE_DESCRIPTION,
       shareUrl,
       imageUrl: previewImageUrl,
-      redirectUrl,
     });
 
-    return reply.code(200).type("text/html; charset=utf-8").send(html);
+    return reply
+      .code(200)
+      .type("text/html; charset=utf-8")
+      .header("X-Share-Route-Version", "og-image-proxy-v2")
+      .send(html);
   });
 }
