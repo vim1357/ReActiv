@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { findCatalogItemById } from "../repositories/catalog-repository";
-import { resolvePreviewUrl } from "../services/media-preview-service";
 
 const DEFAULT_WEB_BASE_URL = "https://reactiv.pro";
 const DEFAULT_SHARE_BASE_URL = "https://api.reactiv.pro";
@@ -69,8 +68,7 @@ async function resolvePreviewImageUrl(yandexDiskUrl: string): Promise<string | n
     return null;
   }
 
-  const resolved = await resolvePreviewUrl(firstMediaUrl);
-  return resolved.previewUrl;
+  return firstMediaUrl;
 }
 
 function buildShareHtml(args: {
@@ -133,9 +131,10 @@ export async function registerShareRoutes(app: FastifyInstance): Promise<void> {
     const shareBaseUrl = resolveShareBaseUrl();
     const redirectUrl = `${webBaseUrl}/showcase/${item.id}`;
     const shareUrl = `${shareBaseUrl}/showcase/${item.id}`;
-    const previewImageUrl =
-      (await resolvePreviewImageUrl(item.yandexDiskUrl)) ??
-      `${webBaseUrl}${FALLBACK_PREVIEW_IMAGE_PATH}`;
+    const previewSourceUrl = await resolvePreviewImageUrl(item.yandexDiskUrl);
+    const previewImageUrl = previewSourceUrl
+      ? `${shareBaseUrl}/api/media/preview-image?url=${encodeURIComponent(previewSourceUrl)}`
+      : `${webBaseUrl}${FALLBACK_PREVIEW_IMAGE_PATH}`;
     const title = `Смотрите, какая машина: ${buildCarNameForShare(item)} за ${formatPriceForShare(item.price)} на платформе РеАктив!`;
 
     const html = buildShareHtml({
@@ -149,4 +148,3 @@ export async function registerShareRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(200).type("text/html; charset=utf-8").send(html);
   });
 }
-
