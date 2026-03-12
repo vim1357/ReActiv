@@ -345,6 +345,54 @@ function filterRowsByNewThisWeek(rows: VehicleOfferDbRow[]): VehicleOfferDbRow[]
   return currentRows.filter((row) => !previousOfferCodes.has(row.offer_code));
 }
 
+function countNewThisWeekRowsBySql(whereClause: string, params: unknown[]): number {
+  const latestImportBatch = getLatestSuccessfulImportBatch();
+  if (!latestImportBatch) {
+    return 0;
+  }
+
+  const baseWhereClause = whereClause
+    ? `${whereClause} AND import_batch_id = ?`
+    : "WHERE import_batch_id = ?";
+  const previousImportBatchId = getPreviousSuccessfulImportBatchId(
+    latestImportBatch.id,
+    latestImportBatch.tenant_id,
+  );
+
+  if (!previousImportBatchId) {
+    const row = db
+      .prepare(`SELECT COUNT(*) AS total FROM vehicle_offers ${baseWhereClause}`)
+      .get(...params, latestImportBatch.id) as { total: number };
+
+    return row.total;
+  }
+
+  const row = db
+    .prepare(
+      `
+        SELECT COUNT(*) AS total
+        FROM vehicle_offers
+        ${baseWhereClause}
+          AND TRIM(COALESCE(offer_code, '')) != ''
+          AND offer_code NOT IN (
+            SELECT DISTINCT offer_code
+            FROM vehicle_offer_snapshots
+            WHERE import_batch_id = ?
+              AND tenant_id = ?
+              AND TRIM(COALESCE(offer_code, '')) != ''
+          )
+      `,
+    )
+    .get(
+      ...params,
+      latestImportBatch.id,
+      previousImportBatchId,
+      latestImportBatch.tenant_id,
+    ) as { total: number };
+
+  return row.total;
+}
+
 function buildWhere(filters: CatalogQuery): { whereClause: string; params: unknown[] } {
   const clauses: string[] = [];
   const params: unknown[] = [];
@@ -441,6 +489,7 @@ function buildWhere(filters: CatalogQuery): { whereClause: string; params: unkno
 export function searchCatalogItems(filters: CatalogQuery): {
   items: CatalogItem[];
   total: number;
+  newThisWeekCount: number;
 } {
   const { whereClause, params } = buildWhere(filters);
   const requestedRegions = normalizeRequestedRegions(filters.city);
@@ -477,14 +526,16 @@ export function searchCatalogItems(filters: CatalogQuery): {
     if (shouldFilterByRegion) {
       filteredRows = filterRowsByRegions(filteredRows, requestedRegions);
     }
+    const newThisWeekRows = filterRowsByNewThisWeek(filteredRows);
     if (shouldFilterByNewThisWeek) {
-      filteredRows = filterRowsByNewThisWeek(filteredRows);
+      filteredRows = newThisWeekRows;
     }
     const paginatedRows = filteredRows.slice(offset, offset + limit);
 
     return {
       items: paginatedRows.map(mapDbRow),
       total: filteredRows.length,
+      newThisWeekCount: newThisWeekRows.length,
     };
   }
 
@@ -499,6 +550,7 @@ export function searchCatalogItems(filters: CatalogQuery): {
   return {
     items: rows.map(mapDbRow),
     total: totalRow.total,
+    newThisWeekCount: countNewThisWeekRowsBySql(whereClause, params),
   };
 }
 

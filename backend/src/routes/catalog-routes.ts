@@ -67,6 +67,7 @@ export async function registerCatalogRoutes(app: FastifyInstance): Promise<void>
 
       return reply.code(200).send({
         items,
+        newThisWeekCount: result.newThisWeekCount,
         pagination: {
           page: query.page,
           pageSize: query.pageSize,

@@ -131,6 +131,7 @@ export interface CatalogItem {
 
 export interface CatalogItemsResponse {
   items: CatalogItem[];
+  newThisWeekCount: number;
   pagination: {
     page: number;
     pageSize: number;

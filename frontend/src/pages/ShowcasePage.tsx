@@ -1,7 +1,6 @@
 ﻿import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  getCatalogSummary,
   getCatalogFilters,
   getCatalogItems,
   logActivityEvent,
@@ -538,7 +537,6 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  const [newThisWeekCount, setNewThisWeekCount] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -630,26 +628,6 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     void loadFilters();
   }, []);
 
-  useEffect(() => {
-    async function loadCatalogSummary() {
-      try {
-        const summary = await getCatalogSummary();
-        setNewThisWeekCount(summary.newThisWeekCount);
-      } catch (caughtError) {
-        void logActivityEvent({
-          eventType: "api_error",
-          page: "/showcase",
-          payload: {
-            endpoint: "/catalog/summary",
-            message:
-              caughtError instanceof Error ? caughtError.message : "unknown_error",
-          },
-        });
-      }
-    }
-
-    void loadCatalogSummary();
-  }, []);
 
   useEffect(() => {
     if (hasLoggedShowcaseOpenRef.current) {
@@ -888,6 +866,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
 
   const items: CatalogItem[] = itemsResponse?.items ?? [];
   const total = itemsResponse?.pagination.total ?? 0;
+  const newThisWeekCount = itemsResponse?.newThisWeekCount ?? 0;
   const hasImportedData = total > 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const vehicleTypeOptions = filters?.vehicleType ?? [];
@@ -2014,7 +1993,4 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     </section>
   );
 }
-
-
-
 
