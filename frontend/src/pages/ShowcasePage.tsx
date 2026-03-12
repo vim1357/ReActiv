@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router-dom";
+﻿import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getCatalogSummary,
@@ -41,7 +41,7 @@ interface ShowcaseUiState {
   mileageMin: string;
   mileageMax: string;
   sortBy: string;
-  sortDir: string;
+  sortDir: SortDirection;
   dateSortDir: SortDirection;
   priceSortDir: SortDirection;
   newThisWeekOnly: boolean;
@@ -69,6 +69,271 @@ interface FilterTrackingSnapshot {
 const SHOWCASE_UI_STATE_KEY = "showcase_ui_state_v1";
 const SHOWCASE_RETURN_FLAG_KEY = "showcase_return_pending_v1";
 const SHOWCASE_SCROLL_Y_KEY = "showcase_scroll_y_v1";
+const SHOWCASE_PAGE_SIZE = 20;
+const SHOWCASE_DEFAULT_SORT_BY = "created_at";
+const SHOWCASE_DEFAULT_SORT_DIR: SortDirection = "desc";
+const SHOWCASE_DEFAULT_DATE_SORT_DIR: SortDirection = "desc";
+const SHOWCASE_DEFAULT_PRICE_SORT_DIR: SortDirection = "asc";
+const SHOWCASE_DEFAULT_VIEW_MODE: ViewMode = "grid";
+const SHOWCASE_ALLOWED_SORT_BY = new Set([
+  "created_at",
+  "price",
+  "year",
+  "mileage_km",
+  "days_on_sale",
+]);
+const SHOWCASE_URL_FILTER_KEYS = new Set([
+  "bookingStatus",
+  "city",
+  "vehicleType",
+  "brand",
+  "model",
+  "priceMin",
+  "priceMax",
+  "yearMin",
+  "yearMax",
+  "mileageMin",
+  "mileageMax",
+  "sortBy",
+  "sortDir",
+  "page",
+  "newThisWeek",
+  "view",
+]);
+
+function createDefaultShowcaseUiState(): ShowcaseUiState {
+  return {
+    bookingPreset: "",
+    city: "",
+    selectedVehicleTypes: [],
+    brand: "",
+    model: "",
+    priceMin: "",
+    priceMax: "",
+    yearMin: "",
+    yearMax: "",
+    mileageMin: "",
+    mileageMax: "",
+    sortBy: SHOWCASE_DEFAULT_SORT_BY,
+    sortDir: SHOWCASE_DEFAULT_SORT_DIR,
+    dateSortDir: SHOWCASE_DEFAULT_DATE_SORT_DIR,
+    priceSortDir: SHOWCASE_DEFAULT_PRICE_SORT_DIR,
+    newThisWeekOnly: false,
+    viewMode: SHOWCASE_DEFAULT_VIEW_MODE,
+    page: 1,
+  };
+}
+
+function isBookingPreset(value: string): value is BookingPreset {
+  return BOOKING_PRESETS.includes(value as BookingPreset);
+}
+
+function parseBooleanFlag(value: string | null): boolean {
+  if (!value) {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
+}
+
+function parsePositivePage(value: string | null): number {
+  if (!value) {
+    return 1;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return 1;
+  }
+  return parsed;
+}
+
+function parseSortDirection(value: string | null, fallback: SortDirection): SortDirection {
+  if (value === "asc" || value === "desc") {
+    return value;
+  }
+  return fallback;
+}
+
+function parseVehicleTypeParams(params: URLSearchParams): string[] {
+  const values = params.getAll("vehicleType");
+  if (values.length === 0) {
+    return [];
+  }
+
+  const expanded = values
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(expanded));
+}
+
+function hasKnownShowcaseQueryParams(params: URLSearchParams): boolean {
+  for (const key of params.keys()) {
+    if (SHOWCASE_URL_FILTER_KEYS.has(key)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function parseShowcaseUiStateFromSearchParams(params: URLSearchParams): ShowcaseUiState {
+  const defaults = createDefaultShowcaseUiState();
+  const sortByRaw = params.get("sortBy");
+  const sortBy = sortByRaw && SHOWCASE_ALLOWED_SORT_BY.has(sortByRaw) ? sortByRaw : defaults.sortBy;
+  const sortDir = parseSortDirection(params.get("sortDir"), defaults.sortDir);
+
+  const dateSortDir =
+    sortBy === "created_at" ? sortDir : SHOWCASE_DEFAULT_DATE_SORT_DIR;
+  const priceSortDir =
+    sortBy === "price" ? sortDir : SHOWCASE_DEFAULT_PRICE_SORT_DIR;
+
+  const viewRaw = params.get("view");
+  const viewMode: ViewMode = viewRaw === "list" ? "list" : SHOWCASE_DEFAULT_VIEW_MODE;
+
+  const bookingStatusRaw = (params.get("bookingStatus") ?? "").trim();
+  const bookingPreset: "" | BookingPreset = isBookingPreset(bookingStatusRaw)
+    ? bookingStatusRaw
+    : "";
+
+  return {
+    bookingPreset,
+    city: (params.get("city") ?? "").trim(),
+    selectedVehicleTypes: parseVehicleTypeParams(params),
+    brand: (params.get("brand") ?? "").trim(),
+    model: (params.get("model") ?? "").trim(),
+    priceMin: normalizeIntegerInput(params.get("priceMin") ?? ""),
+    priceMax: normalizeIntegerInput(params.get("priceMax") ?? ""),
+    yearMin: normalizeIntegerInput(params.get("yearMin") ?? ""),
+    yearMax: normalizeIntegerInput(params.get("yearMax") ?? ""),
+    mileageMin: normalizeIntegerInput(params.get("mileageMin") ?? ""),
+    mileageMax: normalizeIntegerInput(params.get("mileageMax") ?? ""),
+    sortBy,
+    sortDir,
+    dateSortDir,
+    priceSortDir,
+    newThisWeekOnly: parseBooleanFlag(params.get("newThisWeek")),
+    viewMode,
+    page: parsePositivePage(params.get("page")),
+  };
+}
+
+function sanitizeRestoredShowcaseUiState(restored: Partial<ShowcaseUiState>): ShowcaseUiState {
+  const defaults = createDefaultShowcaseUiState();
+  const sortBy =
+    typeof restored.sortBy === "string" && SHOWCASE_ALLOWED_SORT_BY.has(restored.sortBy)
+      ? restored.sortBy
+      : defaults.sortBy;
+  const sortDir = parseSortDirection(restored.sortDir ?? null, defaults.sortDir);
+  const dateSortDir =
+    sortBy === "created_at" ? sortDir : SHOWCASE_DEFAULT_DATE_SORT_DIR;
+  const priceSortDir =
+    sortBy === "price" ? sortDir : SHOWCASE_DEFAULT_PRICE_SORT_DIR;
+
+  return {
+    bookingPreset:
+      typeof restored.bookingPreset === "string" && isBookingPreset(restored.bookingPreset)
+        ? restored.bookingPreset
+        : "",
+    city: typeof restored.city === "string" ? restored.city : "",
+    selectedVehicleTypes: Array.isArray(restored.selectedVehicleTypes)
+      ? restored.selectedVehicleTypes.filter((value) => typeof value === "string" && value.trim())
+      : [],
+    brand: typeof restored.brand === "string" ? restored.brand : "",
+    model: typeof restored.model === "string" ? restored.model : "",
+    priceMin: typeof restored.priceMin === "string" ? normalizeIntegerInput(restored.priceMin) : "",
+    priceMax: typeof restored.priceMax === "string" ? normalizeIntegerInput(restored.priceMax) : "",
+    yearMin: typeof restored.yearMin === "string" ? normalizeIntegerInput(restored.yearMin) : "",
+    yearMax: typeof restored.yearMax === "string" ? normalizeIntegerInput(restored.yearMax) : "",
+    mileageMin:
+      typeof restored.mileageMin === "string" ? normalizeIntegerInput(restored.mileageMin) : "",
+    mileageMax:
+      typeof restored.mileageMax === "string" ? normalizeIntegerInput(restored.mileageMax) : "",
+    sortBy,
+    sortDir,
+    dateSortDir,
+    priceSortDir,
+    newThisWeekOnly: Boolean(restored.newThisWeekOnly),
+    viewMode: restored.viewMode === "list" ? "list" : SHOWCASE_DEFAULT_VIEW_MODE,
+    page:
+      Number.isInteger(restored.page) && (restored.page ?? 0) > 0 ? (restored.page as number) : 1,
+  };
+}
+
+function buildShowcaseFilterSearchParams(state: ShowcaseUiState): URLSearchParams {
+  const params = new URLSearchParams();
+
+  if (state.bookingPreset) {
+    params.set("bookingStatus", state.bookingPreset);
+  }
+  if (state.city) {
+    params.set("city", state.city);
+  }
+  state.selectedVehicleTypes.forEach((value) => params.append("vehicleType", value));
+  if (state.brand) {
+    params.set("brand", state.brand);
+  }
+  if (state.model) {
+    params.set("model", state.model);
+  }
+  if (state.priceMin) {
+    params.set("priceMin", state.priceMin);
+  }
+  if (state.priceMax) {
+    params.set("priceMax", state.priceMax);
+  }
+  if (state.yearMin) {
+    params.set("yearMin", state.yearMin);
+  }
+  if (state.yearMax) {
+    params.set("yearMax", state.yearMax);
+  }
+  if (state.mileageMin) {
+    params.set("mileageMin", state.mileageMin);
+  }
+  if (state.mileageMax) {
+    params.set("mileageMax", state.mileageMax);
+  }
+  if (state.sortBy !== SHOWCASE_DEFAULT_SORT_BY) {
+    params.set("sortBy", state.sortBy);
+  }
+  if (
+    state.sortDir !== SHOWCASE_DEFAULT_SORT_DIR ||
+    state.sortBy !== SHOWCASE_DEFAULT_SORT_BY
+  ) {
+    params.set("sortDir", state.sortDir);
+  }
+  if (state.page > 1) {
+    params.set("page", String(state.page));
+  }
+  if (state.newThisWeekOnly) {
+    params.set("newThisWeek", "true");
+  }
+  if (state.viewMode !== SHOWCASE_DEFAULT_VIEW_MODE) {
+    params.set("view", state.viewMode);
+  }
+
+  return params;
+}
+
+function mergeShowcaseSearchParams(
+  current: URLSearchParams,
+  showcaseFilters: URLSearchParams,
+): URLSearchParams {
+  const merged = new URLSearchParams();
+
+  current.forEach((value, key) => {
+    if (!SHOWCASE_URL_FILTER_KEYS.has(key)) {
+      merged.append(key, value);
+    }
+  });
+
+  showcaseFilters.forEach((value, key) => {
+    merged.append(key, value);
+  });
+
+  return merged;
+}
 
 function readShowcaseUiState(): Partial<ShowcaseUiState> {
   if (typeof window === "undefined") {
@@ -103,7 +368,7 @@ function formatPrice(price: number | null): string {
   if (price === null) {
     return "—";
   }
-  return `${price.toLocaleString("ru-RU")} ₽`;
+  return `${price.toLocaleString("ru-RU")} ?`;
 }
 
 function extractMediaUrls(rawValue: string): string[] {
@@ -214,8 +479,21 @@ function createFilterTrackingSnapshot(input: {
 }
 
 export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
-  const pageSize = 20;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageSize = SHOWCASE_PAGE_SIZE;
   const restoredState = useMemo(readShowcaseUiState, []);
+  const hasKnownUrlParams = useMemo(
+    () => hasKnownShowcaseQueryParams(searchParams),
+    [searchParams],
+  );
+  const initialState = useMemo(() => {
+    if (hasKnownUrlParams) {
+      return parseShowcaseUiStateFromSearchParams(searchParams);
+    }
+
+    return sanitizeRestoredShowcaseUiState(restoredState);
+  }, [hasKnownUrlParams, restoredState, searchParams]);
+
   const hasRestoredScrollRef = useRef(false);
   const restoreAttemptsRef = useRef(0);
   const restoreTimeoutRef = useRef<number | null>(null);
@@ -224,47 +502,34 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
   const hasLoggedInitialPageRef = useRef(false);
   const lastNoResultsSignatureRef = useRef("");
   const previousFilterSnapshotRef = useRef<FilterTrackingSnapshot | null>(null);
-  const initialBookingPreset =
-    restoredState.bookingPreset && BOOKING_PRESETS.includes(restoredState.bookingPreset)
-      ? restoredState.bookingPreset
-      : "";
+  const skipNextUrlToStateSyncRef = useRef(false);
+  const lastKnownUrlFilterPresenceRef = useRef(hasKnownUrlParams);
+  const hasInitializedUrlSyncRef = useRef(false);
 
   const [filters, setFilters] = useState<CatalogFiltersResponse | null>(null);
   const [itemsResponse, setItemsResponse] = useState<CatalogItemsResponse | null>(
     null,
   );
-  const [bookingPreset, setBookingPreset] = useState<"" | BookingPreset>(initialBookingPreset);
-  const [city, setCity] = useState(restoredState.city ?? "");
+  const [bookingPreset, setBookingPreset] = useState<"" | BookingPreset>(initialState.bookingPreset);
+  const [city, setCity] = useState(initialState.city);
   const [selectedVehicleTypes, setSelectedVehicleTypes] = useState<string[]>(
-    Array.isArray(restoredState.selectedVehicleTypes)
-      ? restoredState.selectedVehicleTypes
-      : [],
+    initialState.selectedVehicleTypes,
   );
-  const [brand, setBrand] = useState(restoredState.brand ?? "");
-  const [model, setModel] = useState(restoredState.model ?? "");
-  const [priceMin, setPriceMin] = useState(restoredState.priceMin ?? "");
-  const [priceMax, setPriceMax] = useState(restoredState.priceMax ?? "");
-  const [yearMin, setYearMin] = useState(restoredState.yearMin ?? "");
-  const [yearMax, setYearMax] = useState(restoredState.yearMax ?? "");
-  const [mileageMin, setMileageMin] = useState(restoredState.mileageMin ?? "");
-  const [mileageMax, setMileageMax] = useState(restoredState.mileageMax ?? "");
-  const [newThisWeekOnly, setNewThisWeekOnly] = useState(
-    restoredState.newThisWeekOnly ?? false,
-  );
-  const [sortBy, setSortBy] = useState(restoredState.sortBy ?? "created_at");
-  const [sortDir, setSortDir] = useState(restoredState.sortDir ?? "desc");
-  const [dateSortDir, setDateSortDir] = useState<SortDirection>(
-    restoredState.dateSortDir ?? "desc",
-  );
-  const [priceSortDir, setPriceSortDir] = useState<SortDirection>(
-    restoredState.priceSortDir ?? "asc",
-  );
-  const [viewMode, setViewMode] = useState<ViewMode>(restoredState.viewMode ?? "grid");
-  const [page, setPage] = useState(
-    Number.isInteger(restoredState.page) && (restoredState.page ?? 0) > 0
-      ? (restoredState.page as number)
-      : 1,
-  );
+  const [brand, setBrand] = useState(initialState.brand);
+  const [model, setModel] = useState(initialState.model);
+  const [priceMin, setPriceMin] = useState(initialState.priceMin);
+  const [priceMax, setPriceMax] = useState(initialState.priceMax);
+  const [yearMin, setYearMin] = useState(initialState.yearMin);
+  const [yearMax, setYearMax] = useState(initialState.yearMax);
+  const [mileageMin, setMileageMin] = useState(initialState.mileageMin);
+  const [mileageMax, setMileageMax] = useState(initialState.mileageMax);
+  const [newThisWeekOnly, setNewThisWeekOnly] = useState(initialState.newThisWeekOnly);
+  const [sortBy, setSortBy] = useState(initialState.sortBy);
+  const [sortDir, setSortDir] = useState(initialState.sortDir);
+  const [dateSortDir, setDateSortDir] = useState<SortDirection>(initialState.dateSortDir);
+  const [priceSortDir, setPriceSortDir] = useState<SortDirection>(initialState.priceSortDir);
+  const [viewMode, setViewMode] = useState<ViewMode>(initialState.viewMode);
+  const [page, setPage] = useState(initialState.page);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -458,6 +723,135 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     yearMin,
   ]);
 
+  const showcaseUiState = useMemo<ShowcaseUiState>(
+    () => ({
+      bookingPreset,
+      city,
+      selectedVehicleTypes,
+      brand,
+      model,
+      priceMin,
+      priceMax,
+      yearMin,
+      yearMax,
+      mileageMin,
+      mileageMax,
+      newThisWeekOnly,
+      sortBy,
+      sortDir,
+      dateSortDir,
+      priceSortDir,
+      viewMode,
+      page,
+    }),
+    [
+      bookingPreset,
+      city,
+      selectedVehicleTypes,
+      brand,
+      model,
+      priceMin,
+      priceMax,
+      yearMin,
+      yearMax,
+      mileageMin,
+      mileageMax,
+      newThisWeekOnly,
+      sortBy,
+      sortDir,
+      dateSortDir,
+      priceSortDir,
+      viewMode,
+      page,
+    ],
+  );
+
+  useEffect(() => {
+    if (!hasInitializedUrlSyncRef.current) {
+      hasInitializedUrlSyncRef.current = true;
+      if (!hasKnownShowcaseQueryParams(searchParams)) {
+        return;
+      }
+    }
+
+    const currentSearchParams = new URLSearchParams(searchParams);
+    const nextFilterParams = buildShowcaseFilterSearchParams(showcaseUiState);
+    const nextSearchParams = mergeShowcaseSearchParams(
+      currentSearchParams,
+      nextFilterParams,
+    );
+
+    if (nextSearchParams.toString() === currentSearchParams.toString()) {
+      return;
+    }
+
+    skipNextUrlToStateSyncRef.current = true;
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [searchParams, setSearchParams, showcaseUiState]);
+
+  useEffect(() => {
+    const hasKnownParams = hasKnownShowcaseQueryParams(searchParams);
+
+    if (skipNextUrlToStateSyncRef.current) {
+      skipNextUrlToStateSyncRef.current = false;
+      lastKnownUrlFilterPresenceRef.current = hasKnownParams;
+      return;
+    }
+
+    if (!hasKnownParams && !lastKnownUrlFilterPresenceRef.current) {
+      return;
+    }
+
+    lastKnownUrlFilterPresenceRef.current = hasKnownParams;
+
+    const parsedState = hasKnownParams
+      ? parseShowcaseUiStateFromSearchParams(searchParams)
+      : createDefaultShowcaseUiState();
+
+    if (
+      showcaseUiState.bookingPreset === parsedState.bookingPreset &&
+      showcaseUiState.city === parsedState.city &&
+      JSON.stringify(showcaseUiState.selectedVehicleTypes) ===
+        JSON.stringify(parsedState.selectedVehicleTypes) &&
+      showcaseUiState.brand === parsedState.brand &&
+      showcaseUiState.model === parsedState.model &&
+      showcaseUiState.priceMin === parsedState.priceMin &&
+      showcaseUiState.priceMax === parsedState.priceMax &&
+      showcaseUiState.yearMin === parsedState.yearMin &&
+      showcaseUiState.yearMax === parsedState.yearMax &&
+      showcaseUiState.mileageMin === parsedState.mileageMin &&
+      showcaseUiState.mileageMax === parsedState.mileageMax &&
+      showcaseUiState.newThisWeekOnly === parsedState.newThisWeekOnly &&
+      showcaseUiState.sortBy === parsedState.sortBy &&
+      showcaseUiState.sortDir === parsedState.sortDir &&
+      showcaseUiState.dateSortDir === parsedState.dateSortDir &&
+      showcaseUiState.priceSortDir === parsedState.priceSortDir &&
+      showcaseUiState.viewMode === parsedState.viewMode &&
+      showcaseUiState.page === parsedState.page
+    ) {
+      return;
+    }
+
+    setBookingPreset(parsedState.bookingPreset);
+    setCity(parsedState.city);
+    setSelectedVehicleTypes(parsedState.selectedVehicleTypes);
+    setBrand(parsedState.brand);
+    setModel(parsedState.model);
+    setPriceMin(parsedState.priceMin);
+    setPriceMax(parsedState.priceMax);
+    setYearMin(parsedState.yearMin);
+    setYearMax(parsedState.yearMax);
+    setMileageMin(parsedState.mileageMin);
+    setMileageMax(parsedState.mileageMax);
+    setNewThisWeekOnly(parsedState.newThisWeekOnly);
+    setSortBy(parsedState.sortBy);
+    setSortDir(parsedState.sortDir);
+    setDateSortDir(parsedState.dateSortDir);
+    setPriceSortDir(parsedState.priceSortDir);
+    setViewMode(parsedState.viewMode);
+    setPage(parsedState.page);
+  }, [searchParams, showcaseUiState]);
+
   useEffect(() => {
     async function loadItems() {
       setIsLoading(true);
@@ -485,46 +879,8 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
   }, [query]);
 
   useEffect(() => {
-    writeShowcaseUiState({
-      bookingPreset,
-      city,
-      selectedVehicleTypes,
-      brand,
-      model,
-      priceMin,
-      priceMax,
-      yearMin,
-      yearMax,
-      mileageMin,
-      mileageMax,
-      newThisWeekOnly,
-      sortBy,
-      sortDir,
-      dateSortDir,
-      priceSortDir,
-      viewMode,
-      page,
-    });
-  }, [
-    bookingPreset,
-    city,
-    selectedVehicleTypes,
-    brand,
-    model,
-    priceMin,
-    priceMax,
-    yearMin,
-    yearMax,
-    mileageMin,
-    mileageMax,
-    newThisWeekOnly,
-    sortBy,
-    sortDir,
-    dateSortDir,
-    priceSortDir,
-    viewMode,
-    page,
-  ]);
+    writeShowcaseUiState(showcaseUiState);
+  }, [showcaseUiState]);
 
   const items: CatalogItem[] = itemsResponse?.items ?? [];
   const total = itemsResponse?.pagination.total ?? 0;
@@ -1259,7 +1615,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
                   type="text"
                   inputMode="numeric"
                   className={priceMin ? "showcase-filter is-active" : "showcase-filter"}
-                  placeholder="Цена от, ₽"
+                  placeholder="Цена от, ?"
                   value={formatIntegerWithSpaces(priceMin)}
                   onChange={(event) => {
                     setPage(1);
@@ -1271,7 +1627,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
                   type="text"
                   inputMode="numeric"
                   className={priceMax ? "showcase-filter is-active" : "showcase-filter"}
-                  placeholder="Цена до, ₽"
+                  placeholder="Цена до, ?"
                   value={formatIntegerWithSpaces(priceMax)}
                   onChange={(event) => {
                     setPage(1);
@@ -1618,3 +1974,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     </section>
   );
 }
+
+
+
+
