@@ -17,6 +17,11 @@ interface ResoCardResponse {
   };
 }
 
+interface BulkUpdateResponse {
+  acceptedItems: number;
+  updatedRows: number;
+}
+
 function parseNumberArg(name: string, fallback: number): number {
   const arg = process.argv.find((item) => item.startsWith(`--${name}=`));
   if (!arg) {
@@ -44,6 +49,15 @@ function normalizePhotoUrl(raw: string | null): string | null {
     return `https://api-sale.resoleasing.com${value}`;
   }
   return `https://api-sale.resoleasing.com/${value}`;
+}
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 async function fetchWithTimeout(
@@ -151,7 +165,7 @@ async function main(): Promise<void> {
       ]
         .map((value) => normalizePhotoUrl(value))
         .filter((value): value is string => Boolean(value));
-      const uniqueUrls = [...new Set(mediaUrls)];
+      const uniqueUrls = [...new Set(mediaUrls)].filter((value) => isValidHttpUrl(value));
 
       if (uniqueUrls.length === 0) {
         noMediaCount += 1;
@@ -169,8 +183,11 @@ async function main(): Promise<void> {
 
   const chunks = chunkArray(updates, batchSize);
   let updatedRowsTotal = 0;
+  let failedItems = 0;
 
-  for (const chunk of chunks) {
+  const sendBulkUpdate = async (
+    items: Array<{ offerCode: string; mediaUrls: string[] }>,
+  ): Promise<BulkUpdateResponse> => {
     const bulkUpdateResponse = await fetchWithTimeout(
       `${appApiBaseUrl}/admin/reso-media/bulk-update`,
       {
@@ -179,18 +196,47 @@ async function main(): Promise<void> {
           "content-type": "application/json",
           "x-reso-media-token": token,
         },
-        body: JSON.stringify({ items: chunk }),
+        body: JSON.stringify({ items }),
       },
       DEFAULT_TIMEOUT_MS,
     );
+
     if (!bulkUpdateResponse.ok) {
-      throw new Error(`Failed bulk update: ${bulkUpdateResponse.status}`);
+      const body = await bulkUpdateResponse.text();
+      throw new Error(`Failed bulk update: ${bulkUpdateResponse.status} body=${body}`);
     }
-    const payload = (await bulkUpdateResponse.json()) as {
-      acceptedItems: number;
-      updatedRows: number;
-    };
-    updatedRowsTotal += payload.updatedRows;
+
+    return (await bulkUpdateResponse.json()) as BulkUpdateResponse;
+  };
+
+  for (const chunk of chunks) {
+    try {
+      const payload = await sendBulkUpdate(chunk);
+      updatedRowsTotal += payload.updatedRows;
+      continue;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown_error";
+      // eslint-disable-next-line no-console
+      console.error("reso_media_sync_chunk_failed", {
+        chunkSize: chunk.length,
+        error: message,
+      });
+    }
+
+    for (const item of chunk) {
+      try {
+        const payload = await sendBulkUpdate([item]);
+        updatedRowsTotal += payload.updatedRows;
+      } catch (error) {
+        failedItems += 1;
+        // eslint-disable-next-line no-console
+        console.error("reso_media_sync_item_failed", {
+          offerCode: item.offerCode,
+          urls: item.mediaUrls.length,
+          error: error instanceof Error ? error.message : "unknown_error",
+        });
+      }
+    }
   }
 
   // eslint-disable-next-line no-console
@@ -200,6 +246,7 @@ async function main(): Promise<void> {
     noMediaCount,
     fetchErrorCount,
     updatedRowsTotal,
+    failedItems,
     batchesSent: chunks.length,
     appApiBaseUrl,
   });
