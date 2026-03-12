@@ -165,7 +165,9 @@ async function main(): Promise<void> {
       ]
         .map((value) => normalizePhotoUrl(value))
         .filter((value): value is string => Boolean(value));
-      const uniqueUrls = [...new Set(mediaUrls)].filter((value) => isValidHttpUrl(value));
+      const uniqueUrls = [...new Set(mediaUrls)]
+        .filter((value) => isValidHttpUrl(value))
+        .slice(0, 200);
 
       if (uniqueUrls.length === 0) {
         noMediaCount += 1;
