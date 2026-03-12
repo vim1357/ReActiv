@@ -440,6 +440,10 @@ function sortUniqueValues(values: Iterable<string>): string[] {
   );
 }
 
+function normalizeFilterValueForCompare(value: string): string {
+  return value.trim().toLocaleLowerCase("ru-RU");
+}
+
 function toNullableNumber(value: string): number | null {
   return value ? Number(value) : null;
 }
@@ -1219,27 +1223,47 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
   }, [brand, filters, selectedVehicleTypes]);
 
   useEffect(() => {
-    if (!brand) {
+    if (!filters || !brand) {
       return;
     }
 
-    if (!availableBrands.includes(brand)) {
-      setBrand("");
-      setModel("");
-      setPage(1);
+    const normalizedBrand = normalizeFilterValueForCompare(brand);
+    const matchedBrand = availableBrands.find(
+      (value) => normalizeFilterValueForCompare(value) === normalizedBrand,
+    );
+
+    if (matchedBrand) {
+      if (matchedBrand !== brand) {
+        setBrand(matchedBrand);
+      }
+      return;
     }
-  }, [availableBrands, brand]);
+
+    setBrand("");
+    setModel("");
+    setPage(1);
+  }, [availableBrands, brand, filters]);
 
   useEffect(() => {
-    if (!model) {
+    if (!filters || !model) {
       return;
     }
 
-    if (!availableModels.includes(model)) {
-      setModel("");
-      setPage(1);
+    const normalizedModel = normalizeFilterValueForCompare(model);
+    const matchedModel = availableModels.find(
+      (value) => normalizeFilterValueForCompare(value) === normalizedModel,
+    );
+
+    if (matchedModel) {
+      if (matchedModel !== model) {
+        setModel(matchedModel);
+      }
+      return;
     }
-  }, [availableModels, model]);
+
+    setModel("");
+    setPage(1);
+  }, [availableModels, filters, model]);
 
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
