@@ -15,6 +15,8 @@ import {
 } from "../api/client";
 import type { CatalogItem } from "../types/api";
 
+const RESO_TEST_VIN = "LGJ509EZPPR000290";
+
 function formatPrice(price: number | null): string {
   if (price === null) {
     return "-";
@@ -166,7 +168,16 @@ export function ShowcaseItemPage() {
       return [];
     }
 
-    return extractMediaUrls(item.yandexDiskUrl);
+    const urls = extractMediaUrls(item.yandexDiskUrl);
+    if (urls.length > 0) {
+      return urls;
+    }
+
+    if (item.offerCode === RESO_TEST_VIN) {
+      return [`reso-vin:${item.offerCode}`];
+    }
+
+    return [];
   }, [item]);
 
   useEffect(() => {

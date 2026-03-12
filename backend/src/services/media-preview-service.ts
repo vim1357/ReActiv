@@ -16,8 +16,20 @@ interface YandexResource {
   };
 }
 
+interface ResoSaleCatalogResponse {
+  vin?: string;
+  photos?: {
+    ORIGINAL?: Array<string | null>;
+    BIG?: Array<string | null>;
+    SMALL?: Array<string | null>;
+  };
+}
+
 const PREVIEW_CACHE_TTL_MS = 10 * 60 * 1000;
 const previewCache = new Map<string, { previewUrl: string | null; expiresAt: number }>();
+const galleryCache = new Map<string, { galleryUrls: string[]; expiresAt: number }>();
+const RESO_IMAGE_BASE_URL = "https://api-sale.resoleasing.com";
+const RESO_SALE_API_BASE_URL = "https://admin.resoleasing.com/api/sales-catalog";
 
 function isImageLikeUrl(url: string): boolean {
   return /\.(png|jpe?g|webp|gif|bmp|svg)(\?.*)?$/i.test(url);
@@ -73,6 +85,86 @@ function isYandexPublicLink(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function parseResoVinSourceUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.toLowerCase().startsWith("reso-vin:")) {
+    const vin = trimmed.slice("reso-vin:".length).trim().toUpperCase();
+    return vin || null;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const vin = parsed.searchParams.get("vin")?.trim().toUpperCase();
+    if (
+      vin &&
+      parsed.hostname.toLowerCase() === "admin.resoleasing.com" &&
+      parsed.pathname === "/api/sales-catalog"
+    ) {
+      return vin;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function normalizeResoImageUrl(raw: string | null): string | null {
+  if (!raw) {
+    return null;
+  }
+
+  const value = raw.trim();
+  if (!value) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  if (value.startsWith("/")) {
+    return `${RESO_IMAGE_BASE_URL}${value}`;
+  }
+
+  return `${RESO_IMAGE_BASE_URL}/${value}`;
+}
+
+async function resolveResoGalleryByVin(vin: string): Promise<string[]> {
+  const cached = galleryCache.get(`reso-vin:${vin}`);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.galleryUrls;
+  }
+
+  const apiUrl = new URL(RESO_SALE_API_BASE_URL);
+  apiUrl.searchParams.set("vin", vin);
+
+  const response = await fetch(apiUrl.toString(), { method: "GET" });
+  if (!response.ok) {
+    return [];
+  }
+
+  const payload = (await response.json()) as ResoSaleCatalogResponse;
+  const originalUrls = (payload.photos?.ORIGINAL ?? [])
+    .map((value) => normalizeResoImageUrl(value))
+    .filter((value): value is string => Boolean(value));
+  const bigUrls = (payload.photos?.BIG ?? [])
+    .map((value) => normalizeResoImageUrl(value))
+    .filter((value): value is string => Boolean(value));
+  const urls = [...new Set([...originalUrls, ...bigUrls])];
+
+  galleryCache.set(`reso-vin:${vin}`, {
+    galleryUrls: urls,
+    expiresAt: Date.now() + PREVIEW_CACHE_TTL_MS,
+  });
+
+  return urls;
 }
 
 function pickImageFromResource(resource: YandexResource): string | null {
@@ -182,7 +274,11 @@ export async function resolvePreviewUrl(sourceUrl: string): Promise<PreviewResul
   let previewUrl: string | null = null;
 
   try {
-    if (isDirectImageUrl(trimmed)) {
+    const resoVin = parseResoVinSourceUrl(trimmed);
+    if (resoVin) {
+      const galleryUrls = await resolveResoGalleryByVin(resoVin);
+      previewUrl = galleryUrls[0] ?? null;
+    } else if (isDirectImageUrl(trimmed)) {
       previewUrl = trimmed;
     } else if (isYandexPublicLink(trimmed)) {
       previewUrl = await resolveYandexPreview(trimmed);
@@ -206,6 +302,11 @@ export async function resolveGalleryUrls(sourceUrl: string): Promise<GalleryResu
   }
 
   try {
+    const resoVin = parseResoVinSourceUrl(trimmed);
+    if (resoVin) {
+      return { galleryUrls: await resolveResoGalleryByVin(resoVin) };
+    }
+
     if (isDirectImageUrl(trimmed)) {
       return { galleryUrls: [trimmed] };
     }

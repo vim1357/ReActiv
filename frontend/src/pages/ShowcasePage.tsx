@@ -16,6 +16,7 @@ interface ShowcasePageProps {
   publicMode?: boolean;
 }
 
+const RESO_TEST_VIN = "LGJ509EZPPR000290";
 type BookingPreset = "Свободен" | "Забронирован" | "На согласовании";
 
 const BOOKING_PRESETS: BookingPreset[] = [
@@ -1847,7 +1848,9 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
           <>
             <div className={effectiveViewMode === "list" ? "cards-grid cards-grid--list" : "cards-grid"}>
               {items.map((item, index) => {
-                const primaryMediaUrl = extractMediaUrls(item.yandexDiskUrl)[0];
+                const primaryMediaUrl =
+                  extractMediaUrls(item.yandexDiskUrl)[0] ??
+                  (item.offerCode === RESO_TEST_VIN ? `reso-vin:${item.offerCode}` : undefined);
 
                 return (
                   <Link
