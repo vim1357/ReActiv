@@ -22,6 +22,9 @@ const RESO_TEST_MEDIA_BY_OFFER_CODE: Record<string, string[]> = {
   LGJ509EZKRR000360: [
     "https://api-sale.resoleasing.com/upload/resize_cache/iblock/2a1/768_1024_1d42db8e25ea118a20d6873f14b9565f0/2026-01-12_PHOTO_62eccc3d7b4611ef8c6f005056b521a7_69cfdc33eff911f08c7b005056b521a7.jpg",
   ],
+  CLG2000ZAMT047826: [
+    "https://api-sale.resoleasing.com/upload/resize_cache/iblock/af2/1024_768_1d42db8e25ea118a20d6873f14b9565f0/2026-02-26_PHOTO_bfca23724f9111ed927e00505601348b_66edfbf9131b11f18c80005056b521a7.jpg",
+  ],
 };
 
 function formatPrice(price: number | null): string {
