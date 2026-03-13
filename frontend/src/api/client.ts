@@ -52,7 +52,7 @@ export function buildPublicShareUrl(itemId: number): string {
 
 export function buildTelegramShareUrl(itemId: number): string {
   const shareUrlObject = new URL(buildPublicShareUrl(itemId));
-  shareUrlObject.searchParams.set("tg_preview", "compact_v1");
+  shareUrlObject.searchParams.set("tg_preview", "compact_v2");
   const shareUrl = encodeURIComponent(shareUrlObject.toString());
   return `https://t.me/share/url?url=${shareUrl}`;
 }
