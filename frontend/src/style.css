@@ -2553,9 +2553,6 @@ tbody tr:nth-child(even) {
   border-color: #5f89b6;
 }
 
-.detail-thumb--more-button:disabled {
-  pointer-events: none;
-}
 
 .detail-thumb__more--static {
   position: static;

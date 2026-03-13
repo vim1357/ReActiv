@@ -670,16 +670,23 @@ export function ShowcaseItemPage() {
                         type="button"
                         className="detail-thumb detail-thumb--more-button"
                         onClick={() => {
-                          setIsThumbnailListExpanded(true);
+                          setIsThumbnailListExpanded((currentValue) => !currentValue);
                         }}
-                        disabled={isThumbnailListExpanded}
                         aria-expanded={isThumbnailListExpanded}
                         aria-controls="detail-hidden-thumbnails"
-                        aria-label={`Показать еще ${hiddenThumbnailCount} фото`}
-                        title={`Показать еще ${hiddenThumbnailCount} фото`}
+                        aria-label={
+                          isThumbnailListExpanded
+                            ? "Свернуть список фото"
+                            : `Показать еще ${hiddenThumbnailCount} фото`
+                        }
+                        title={
+                          isThumbnailListExpanded
+                            ? "Свернуть список фото"
+                            : `Показать еще ${hiddenThumbnailCount} фото`
+                        }
                       >
                         <span className="detail-thumb__more detail-thumb__more--static">
-                          +{hiddenThumbnailCount} фото
+                          {isThumbnailListExpanded ? "Свернуть" : `+${hiddenThumbnailCount} фото`}
                         </span>
                       </button>
                     )}
