@@ -238,14 +238,18 @@ export function ShowcaseItemPage() {
   const selectedImageIndex = selectedImage ? mediaUrls.indexOf(selectedImage) : -1;
   const maxThumbnailCount = 8;
   const hasHiddenThumbnails = mediaUrls.length > maxThumbnailCount;
-  const visibleThumbnails = hasHiddenThumbnails
+  const collapsedVisibleThumbnails = hasHiddenThumbnails
     ? mediaUrls.slice(0, maxThumbnailCount - 1)
     : mediaUrls;
+  const visibleThumbnails =
+    hasHiddenThumbnails && isThumbnailListExpanded
+      ? mediaUrls.slice(0, maxThumbnailCount)
+      : collapsedVisibleThumbnails;
   const hiddenThumbnailCount = hasHiddenThumbnails
-    ? mediaUrls.length - visibleThumbnails.length
+    ? mediaUrls.length - collapsedVisibleThumbnails.length
     : 0;
   const hiddenThumbnails = hasHiddenThumbnails
-    ? mediaUrls.slice(visibleThumbnails.length)
+    ? mediaUrls.slice(maxThumbnailCount)
     : [];
   const contactMessage = item
     ? `Добрый день. Вопрос по лоту *${item.offerCode}`
@@ -666,23 +670,16 @@ export function ShowcaseItemPage() {
                         type="button"
                         className="detail-thumb detail-thumb--more-button"
                         onClick={() => {
-                          setIsThumbnailListExpanded((currentValue) => !currentValue);
+                          setIsThumbnailListExpanded(true);
                         }}
+                        disabled={isThumbnailListExpanded}
                         aria-expanded={isThumbnailListExpanded}
                         aria-controls="detail-hidden-thumbnails"
-                        aria-label={
-                          isThumbnailListExpanded
-                            ? "Свернуть список фото"
-                            : `Показать еще ${hiddenThumbnailCount} фото`
-                        }
-                        title={
-                          isThumbnailListExpanded
-                            ? "Свернуть список фото"
-                            : `Показать еще ${hiddenThumbnailCount} фото`
-                        }
+                        aria-label={`Показать еще ${hiddenThumbnailCount} фото`}
+                        title={`Показать еще ${hiddenThumbnailCount} фото`}
                       >
                         <span className="detail-thumb__more detail-thumb__more--static">
-                          {isThumbnailListExpanded ? "Свернуть" : `+${hiddenThumbnailCount} фото`}
+                          +{hiddenThumbnailCount} фото
                         </span>
                       </button>
                     )}

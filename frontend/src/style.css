@@ -2477,10 +2477,8 @@ tbody tr:nth-child(even) {
 .detail-thumbnails--expanded {
   flex-wrap: wrap;
   overflow-x: hidden;
-  overflow-y: auto;
-  max-height: min(34vh, 300px);
+  overflow-y: visible;
   align-content: flex-start;
-  padding-right: 2px;
 }
 
 .detail-thumbnails--expanded .detail-thumb {
@@ -2553,6 +2551,10 @@ tbody tr:nth-child(even) {
 .detail-thumb--more-button[aria-expanded="true"] {
   background: linear-gradient(135deg, #3f6a99, #4f7fb3);
   border-color: #5f89b6;
+}
+
+.detail-thumb--more-button:disabled {
+  pointer-events: none;
 }
 
 .detail-thumb__more--static {
