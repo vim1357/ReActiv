@@ -2474,6 +2474,21 @@ tbody tr:nth-child(even) {
   scrollbar-width: thin;
 }
 
+.detail-thumbnails--expanded {
+  flex-wrap: wrap;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: min(34vh, 300px);
+  align-content: flex-start;
+  padding-right: 2px;
+}
+
+.detail-thumbnails--expanded .detail-thumb {
+  flex: 0 0 88px;
+  min-width: 88px;
+  max-width: 88px;
+}
+
 .detail-thumb {
   display: block;
   flex: 1 1 0;
@@ -2533,6 +2548,11 @@ tbody tr:nth-child(even) {
   aspect-ratio: 1 / 1;
   background: linear-gradient(135deg, #5a6778, #748395);
   border-color: #7f8ea0;
+}
+
+.detail-thumb--more-button[aria-expanded="true"] {
+  background: linear-gradient(135deg, #3f6a99, #4f7fb3);
+  border-color: #5f89b6;
 }
 
 .detail-thumb__more--static {

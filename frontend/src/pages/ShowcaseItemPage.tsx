@@ -123,6 +123,7 @@ export function ShowcaseItemPage() {
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState("");
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isThumbnailListExpanded, setIsThumbnailListExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -243,9 +244,9 @@ export function ShowcaseItemPage() {
   const hiddenThumbnailCount = hasHiddenThumbnails
     ? mediaUrls.length - visibleThumbnails.length
     : 0;
-  const firstHiddenThumbnailUrl = hasHiddenThumbnails
-    ? mediaUrls[visibleThumbnails.length]
-    : null;
+  const hiddenThumbnails = hasHiddenThumbnails
+    ? mediaUrls.slice(visibleThumbnails.length)
+    : [];
   const contactMessage = item
     ? `Добрый день. Вопрос по лоту *${item.offerCode}`
     : "Добрый день. Вопрос по лоту";
@@ -267,6 +268,10 @@ export function ShowcaseItemPage() {
       setSelectedImage(mediaUrls[0]);
     }
   }, [mediaUrls, selectedImage]);
+
+  useEffect(() => {
+    setIsThumbnailListExpanded(false);
+  }, [itemId]);
 
   function openLightbox(
     url: string,
@@ -642,33 +647,69 @@ export function ShowcaseItemPage() {
               </div>
 
               {mediaUrls.length > 1 && (
-                <div className="detail-thumbnails">
-                  {visibleThumbnails.map((url, index) => (
-                    <button
-                      type="button"
-                      key={url}
-                      className={url === selectedImage ? "detail-thumb active" : "detail-thumb"}
-                      onClick={() => openLightbox(url, "thumbnail")}
-                      aria-label={`Фото ${index + 1}`}
-                      title="Открыть полноэкранный просмотр"
-                    >
-                      <ProxyAwareImage sourceUrl={url} alt="Миниатюра" />
-                    </button>
-                  ))}
-                  {hasHiddenThumbnails && firstHiddenThumbnailUrl && (
-                    <button
-                      type="button"
-                      className="detail-thumb detail-thumb--more-button"
-                      onClick={() => openLightbox(firstHiddenThumbnailUrl, "hidden_thumbnails")}
-                      aria-label={`Показать еще ${hiddenThumbnailCount} фото`}
-                      title={`Показать еще ${hiddenThumbnailCount} фото`}
-                    >
-                      <span className="detail-thumb__more detail-thumb__more--static">
-                        +{hiddenThumbnailCount} фото
-                      </span>
-                    </button>
+                <>
+                  <div className="detail-thumbnails">
+                    {visibleThumbnails.map((url, index) => (
+                      <button
+                        type="button"
+                        key={url}
+                        className={url === selectedImage ? "detail-thumb active" : "detail-thumb"}
+                        onClick={() => openLightbox(url, "thumbnail")}
+                        aria-label={`Фото ${index + 1}`}
+                        title="Открыть полноэкранный просмотр"
+                      >
+                        <ProxyAwareImage sourceUrl={url} alt="Миниатюра" />
+                      </button>
+                    ))}
+                    {hasHiddenThumbnails && (
+                      <button
+                        type="button"
+                        className="detail-thumb detail-thumb--more-button"
+                        onClick={() => {
+                          setIsThumbnailListExpanded((currentValue) => !currentValue);
+                        }}
+                        aria-expanded={isThumbnailListExpanded}
+                        aria-controls="detail-hidden-thumbnails"
+                        aria-label={
+                          isThumbnailListExpanded
+                            ? "Свернуть список фото"
+                            : `Показать еще ${hiddenThumbnailCount} фото`
+                        }
+                        title={
+                          isThumbnailListExpanded
+                            ? "Свернуть список фото"
+                            : `Показать еще ${hiddenThumbnailCount} фото`
+                        }
+                      >
+                        <span className="detail-thumb__more detail-thumb__more--static">
+                          {isThumbnailListExpanded ? "Свернуть" : `+${hiddenThumbnailCount} фото`}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
+                  {hasHiddenThumbnails && isThumbnailListExpanded && (
+                    <div id="detail-hidden-thumbnails" className="detail-thumbnails detail-thumbnails--expanded">
+                      {hiddenThumbnails.map((url, index) => (
+                        <button
+                          type="button"
+                          key={`${url}-${index}`}
+                          className={url === selectedImage ? "detail-thumb active" : "detail-thumb"}
+                          onClick={() => openLightbox(url, "thumbnail")}
+                          aria-label={`Фото ${visibleThumbnails.length + index + 1}`}
+                          title="Открыть полноэкранный просмотр"
+                        >
+                          <ProxyAwareImage
+                            sourceUrl={url}
+                            alt="Миниатюра"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </button>
+                      ))}
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </section>
           </div>
