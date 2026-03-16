@@ -21,6 +21,7 @@ MVP platform for importing leasing lots from Excel and publishing them in a unif
 - Multi-tenant import profiles:
   - `gpb`
   - `reso`
+  - `alpha`
 - Tenant-specific header mapping.
 - Delta stats per batch:
   - `added`
@@ -164,10 +165,10 @@ Base URL: `/api`
 - `PATCH /admin/platform/mode` (admin)
 
 ### Import
-- `GET /imports?limit=20&tenantId=gpb|reso`
-- `POST /imports?tenantId=gpb|reso`
+- `GET /imports?limit=20&tenantId=gpb|reso|alpha`
+- `POST /imports?tenantId=gpb|reso|alpha`
 - `GET /imports/:id`
-- `DELETE /imports?tenantId=gpb|reso`
+- `DELETE /imports?tenantId=gpb|reso|alpha`
 
 ### Catalog
 - `GET /catalog/summary`
@@ -238,7 +239,7 @@ See details in:
 
 1. Backend `/health` returns `200`.
 2. Login works for admin and non-admin users.
-3. Import for each tenant profile (`gpb`, `reso`) succeeds.
+3. Import for each tenant profile (`gpb`, `reso`, `alpha`) succeeds.
 4. Import summary and warnings are visible in upload UI.
 5. Showcase filters and lot detail pages work.
 6. Activity events are visible in admin activity pages.

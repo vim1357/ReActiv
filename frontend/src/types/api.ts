@@ -1,6 +1,6 @@
 export type UserRole = "admin" | "manager" | "stock_owner";
 export type PlatformMode = "closed" | "open";
-export type ImportTenantId = "gpb" | "reso";
+export type ImportTenantId = "gpb" | "reso" | "alpha";
 
 export interface ImportErrorItem {
   rowNumber: number;

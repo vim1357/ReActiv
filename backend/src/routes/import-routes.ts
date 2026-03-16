@@ -10,6 +10,11 @@ import { importWorkbook } from "../services/import-service";
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
+function isSupportedImportFilename(filename: string): boolean {
+  const normalized = filename.toLowerCase();
+  return normalized.endsWith(".xlsx") || normalized.endsWith(".xls");
+}
+
 function rejectIfNoImportAccess(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -65,8 +70,8 @@ export async function registerImportRoutes(app: FastifyInstance): Promise<void> 
       return reply.code(400).send({ message: "File is required" });
     }
 
-    if (!file.filename.toLowerCase().endsWith(".xlsx")) {
-      return reply.code(400).send({ message: "Only .xlsx files are allowed" });
+    if (!isSupportedImportFilename(file.filename)) {
+      return reply.code(400).send({ message: "Only .xlsx and .xls files are allowed" });
     }
 
     const chunks: Buffer[] = [];

@@ -27,6 +27,7 @@ interface ImportWarningSummaryItem {
 const IMPORT_TENANTS: Array<{ id: ImportTenantId; label: string }> = [
   { id: "gpb", label: "ГПБ Лизинг" },
   { id: "reso", label: "РЕСО Лизинг" },
+  { id: "alpha", label: "Альфа Лизинг" },
 ];
 
 function getTenantLabel(tenantId: ImportTenantId): string {
@@ -228,7 +229,7 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
-      setError("Выберите файл .xlsx");
+      setError("Выберите файл .xlsx или .xls");
       return;
     }
 
@@ -314,7 +315,7 @@ export function UploadPage({ canAccessCatalog = true }: UploadPageProps) {
 
         <input
           type="file"
-          accept=".xlsx"
+          accept=".xlsx,.xls"
           onChange={(event) => {
             const selected = event.target.files?.[0] ?? null;
             setFile(selected);
