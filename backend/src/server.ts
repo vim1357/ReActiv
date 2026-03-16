@@ -4,6 +4,7 @@ import multipart from "@fastify/multipart";
 import Fastify from "fastify";
 import { initializeSchema } from "./db/schema";
 import { registerAdminUserRoutes } from "./routes/admin-user-routes";
+import { registerAdminAlphaMediaRoutes } from "./routes/admin-alpha-media-routes";
 import { registerAdminResoMediaRoutes } from "./routes/admin-reso-media-routes";
 import { registerActivityRoutes } from "./routes/activity-routes";
 import { registerAuthRoutes } from "./routes/auth-routes";
@@ -35,6 +36,8 @@ const ALWAYS_PUBLIC_PATHS = new Set([
   "/api/public/activity/events",
   "/api/admin/reso-media/candidates",
   "/api/admin/reso-media/bulk-update",
+  "/api/admin/alpha-media/candidates",
+  "/api/admin/alpha-media/bulk-update",
 ]);
 const ALWAYS_PUBLIC_PREFIXES = ["/showcase/"];
 
@@ -103,6 +106,7 @@ async function startServer(): Promise<void> {
   await registerShareRoutes(app);
   await registerAdminUserRoutes(app);
   await registerAdminResoMediaRoutes(app);
+  await registerAdminAlphaMediaRoutes(app);
   await registerActivityRoutes(app);
 
   try {

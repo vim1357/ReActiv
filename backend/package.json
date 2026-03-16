@@ -10,7 +10,8 @@
     "create-user": "tsx src/scripts/create-user.ts",
     "set-user-password": "tsx src/scripts/set-user-password.ts",
     "enrich-reso-media": "tsx src/scripts/enrich-reso-media.ts",
-    "sync-reso-media-via-api": "tsx src/scripts/sync-reso-media-via-api.ts"
+    "sync-reso-media-via-api": "tsx src/scripts/sync-reso-media-via-api.ts",
+    "sync-alpha-media-via-api": "tsx src/scripts/sync-alpha-media-via-api.ts"
   },
   "keywords": [],
   "author": "",

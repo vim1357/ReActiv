@@ -35,6 +35,10 @@ export interface VehicleOfferMediaCandidate {
   yandexDiskUrl: string | null;
 }
 
+export interface VehicleOfferMediaCandidateWithWebsite extends VehicleOfferMediaCandidate {
+  websiteUrl: string | null;
+}
+
 function toDbText(value: string | null): string {
   return value ?? "";
 }
@@ -406,6 +410,32 @@ export function listVehicleOfferMediaCandidatesByTenant(
   return rows.map((row) => ({
     offerCode: row.offer_code,
     yandexDiskUrl: mapDbText(row.yandex_disk_url),
+  }));
+}
+
+export function listVehicleOfferMediaCandidatesWithWebsiteByTenant(
+  tenantId: string,
+): VehicleOfferMediaCandidateWithWebsite[] {
+  const rows = db
+    .prepare(
+      `
+        SELECT offer_code, yandex_disk_url, website_url
+        FROM vehicle_offers
+        WHERE tenant_id = ?
+          AND TRIM(COALESCE(offer_code, '')) != ''
+        ORDER BY id ASC
+      `,
+    )
+    .all(tenantId) as Array<{
+    offer_code: string;
+    yandex_disk_url: string;
+    website_url: string;
+  }>;
+
+  return rows.map((row) => ({
+    offerCode: row.offer_code,
+    yandexDiskUrl: mapDbText(row.yandex_disk_url),
+    websiteUrl: mapDbText(row.website_url),
   }));
 }
 
