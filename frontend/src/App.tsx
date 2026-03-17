@@ -7,10 +7,11 @@ import {
   logout,
 } from "./api/client";
 import { FeedbackWidget } from "./components/FeedbackWidget";
-import { LegalLinks } from "./components/LegalLinks";
+import { LegalLinks, PrivacyPolicyLink, TermsLink } from "./components/LegalLinks";
 import { CatalogPage } from "./pages/CatalogPage";
 import { AdminActivityPage } from "./pages/AdminActivityPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ShowcaseItemPage } from "./pages/ShowcaseItemPage";
 import { ShowcasePage } from "./pages/ShowcasePage";
@@ -62,11 +63,102 @@ function PublicLegalFooter() {
   );
 }
 
+function isPublicCatalogPath(pathname: string): boolean {
+  return pathname === "/" || pathname === "/showcase" || pathname.startsWith("/showcase/");
+}
+
+function isPublicLayoutPath(pathname: string): boolean {
+  return isPublicCatalogPath(pathname) || pathname === "/landing";
+}
+
+function PublicSiteHeader({
+  pathname,
+  isMenuOpen,
+  onToggleMenu,
+  onCloseMenu,
+}: {
+  pathname: string;
+  isMenuOpen: boolean;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
+}) {
+  const catalogActive = isPublicCatalogPath(pathname);
+  const landingActive = pathname === "/landing";
+  const loginActive = pathname === "/login";
+
+  return (
+    <header className="landing-header">
+      <Link className="landing-header__brand" to="/" onClick={onCloseMenu}>
+        <span className="landing-header__logo">РеАктив</span>
+        <span className="landing-header__subtitle">единый агрегатор лизинговой техники</span>
+      </Link>
+
+      <button
+        className={`landing-header__burger${isMenuOpen ? " is-open" : ""}`}
+        type="button"
+        aria-expanded={isMenuOpen}
+        aria-controls="public-site-nav"
+        aria-label={isMenuOpen ? "Закрыть меню" : "Открыть меню"}
+        onClick={onToggleMenu}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      <nav
+        id="public-site-nav"
+        className={`landing-header__nav${isMenuOpen ? " is-open" : ""}`}
+        aria-label="Публичная навигация"
+      >
+        <Link
+          to="/"
+          className={catalogActive ? "is-active" : undefined}
+          onClick={onCloseMenu}
+        >
+          Каталог техники
+        </Link>
+        <Link
+          to="/landing"
+          className={landingActive ? "is-active" : undefined}
+          onClick={onCloseMenu}
+        >
+          О платформе
+        </Link>
+        <Link
+          to="/login"
+          state={{ activitySource: "public_site_header" }}
+          className={loginActive ? "is-active" : undefined}
+          onClick={onCloseMenu}
+        >
+          Личный кабинет для ЮЛ
+        </Link>
+      </nav>
+    </header>
+  );
+}
+
+function PublicSiteFooter() {
+  return (
+    <footer className="landing-footer">
+      <div className="landing-footer__line" aria-hidden />
+      <div className="landing-footer__content">
+        <p className="landing-footer__meta">РеАктив | 2026</p>
+        <div className="landing-footer__links">
+          <PrivacyPolicyLink />
+          <TermsLink />
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export function App() {
   const location = useLocation();
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [platformMode, setPlatformMode] = useState<PlatformModeState>("checking");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [isPublicMenuOpen, setIsPublicMenuOpen] = useState(false);
   const hasLoggedSessionStartRef = useRef(false);
   const lastLoggedPageRef = useRef<string>("");
 
@@ -85,6 +177,8 @@ export function App() {
     }
 
     const pathname = location.pathname;
+    const isLandingPath = pathname === "/landing";
+    const isShowcasePath = pathname === "/" || pathname === "/showcase";
     const isServicePath =
       pathname === "/login" ||
       pathname === HIDDEN_ADMIN_LOGIN_PATH ||
@@ -97,14 +191,22 @@ export function App() {
       ? "ReActiv"
       : isItemPage
         ? "Лот техники — ReActiv"
-        : PUBLIC_TITLE;
+        : isLandingPath
+          ? PUBLIC_TITLE
+          : isShowcasePath
+          ? "Каталог техники — ReActiv"
+          : PUBLIC_TITLE;
     document.title = title;
 
     upsertMetaByName("robots", isServicePath ? "noindex, nofollow" : "index, follow");
+    upsertMetaByName(
+      "description",
+      isLandingPath
+        ? "ReActiv — единый агрегатор автомобилей после лизинга с каталогом актуальных лотов по всей России."
+        : "Каталог автомобилей после лизинга, изъятых лотов и актуальных предложений ReActiv.",
+    );
 
-    const canonicalPath =
-      pathname === "/" || pathname === "/showcase" ? "/" : pathname;
-    upsertCanonicalLink(`https://reactiv.pro${canonicalPath}`);
+    upsertCanonicalLink(`https://reactiv.pro${pathname === "/showcase" ? "/" : pathname}`);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -196,6 +298,22 @@ export function App() {
     });
   }, [authState, location.pathname, location.search]);
 
+  useEffect(() => {
+    setIsPublicMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isPublicMenuOpen) {
+      document.body.style.overflow = "";
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isPublicMenuOpen]);
+
   async function handleLogout(): Promise<void> {
     try {
       void logActivityEvent({
@@ -228,54 +346,30 @@ export function App() {
     );
 
     if (platformMode === "open") {
-      const shouldShowPublicHeader =
-        location.pathname === "/" || location.pathname === "/showcase";
+      const showPublicLayout = isPublicLayoutPath(location.pathname);
 
       return (
         <>
           <div className="app">
-            {shouldShowPublicHeader && (
-              <div className="public-showcase-topbar">
-                <div className="public-showcase-topbar__left">
-                  <Link to="/" className="public-showcase-brand">
-                    <span>ре</span>Актив
-                  </Link>
-                  <div className="public-showcase-tagline">
-                    единый агрегатор изъятой лизинговой техники
-                  </div>
-                </div>
-                <nav className="public-showcase-nav" aria-label="Публичная навигация">
-                  <NavLink
-                    to="/"
-                    className={({ isActive }) =>
-                      isActive ? "public-showcase-nav__link is-active" : "public-showcase-nav__link"
-                    }
-                    end
-                  >
-                    Каталог техники
-                  </NavLink>
-                  <NavLink
-                    to="/login"
-                    state={{ activitySource: "public_showcase_header" }}
-                    className={({ isActive }) =>
-                      isActive ? "public-showcase-nav__link is-active" : "public-showcase-nav__link"
-                    }
-                  >
-                    Личный кабинет для ЮЛ
-                  </NavLink>
-                </nav>
-              </div>
+            {showPublicLayout && (
+              <PublicSiteHeader
+                pathname={location.pathname}
+                isMenuOpen={isPublicMenuOpen}
+                onToggleMenu={() => setIsPublicMenuOpen((prev) => !prev)}
+                onCloseMenu={() => setIsPublicMenuOpen(false)}
+              />
             )}
 
             <Routes>
               <Route path="/" element={<ShowcasePage publicMode />} />
+              <Route path="/landing" element={<LandingPage />} />
               <Route path="/showcase" element={<Navigate to="/" replace />} />
               <Route path="/showcase/:itemId" element={<ShowcaseItemPage />} />
               <Route path={HIDDEN_ADMIN_LOGIN_PATH} element={loginElement} />
               <Route path="/login" element={loginElement} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-            <PublicLegalFooter />
+            {showPublicLayout ? <PublicSiteFooter /> : <PublicLegalFooter />}
           </div>
           <FeedbackWidget />
         </>
