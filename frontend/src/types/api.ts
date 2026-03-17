@@ -129,8 +129,24 @@ export interface CatalogItem {
   createdAt: string;
 }
 
+export interface CatalogListItem {
+  id: number;
+  offerCode: string;
+  status: string;
+  brand: string;
+  model: string;
+  title: string;
+  year: number | null;
+  mileageKm: number | null;
+  price: number | null;
+  bookingStatus: string;
+  storageAddress: string;
+  responsiblePerson: string;
+  previewUrl: string | null;
+}
+
 export interface CatalogItemsResponse {
-  items: CatalogItem[];
+  items: CatalogListItem[];
   newThisWeekCount: number;
   pagination: {
     page: number;

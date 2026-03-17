@@ -10,9 +10,9 @@ import {
 
 function sanitizeCatalogItemForRole<
   T extends {
-    responsiblePerson: string;
-    websiteUrl: string;
-    daysOnSale: number | null;
+    responsiblePerson?: string;
+    websiteUrl?: string;
+    daysOnSale?: number | null;
   },
 >(item: T, role: string | undefined): T {
   if (role === "admin" || role === "stock_owner") {
@@ -21,9 +21,15 @@ function sanitizeCatalogItemForRole<
 
   return {
     ...item,
-    responsiblePerson: "",
-    websiteUrl: "",
-    daysOnSale: null,
+    ...(Object.prototype.hasOwnProperty.call(item, "responsiblePerson")
+      ? { responsiblePerson: "" }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(item, "websiteUrl")
+      ? { websiteUrl: "" }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(item, "daysOnSale")
+      ? { daysOnSale: null }
+      : {}),
   };
 }
 

@@ -5,14 +5,14 @@ import {
   getMediaPreviewImageUrl,
   logActivityEvent,
 } from "../api/client";
-import type { CatalogItem } from "../types/api";
+import type { CatalogListItem } from "../types/api";
 import "../styles/landing.css";
 
 const PREPOSITION_NBSP_PATTERN =
   /(^|[\s([{'"«„-])(а|без|в|во|для|до|за|и|из|к|ко|на|над|не|ни|о|об|обо|от|по|под|при|про|с|со|у)\s+/giu;
 
 interface LandingCatalogState {
-  featuredItems: CatalogItem[];
+  featuredItems: CatalogListItem[];
 }
 
 interface FaqItem {
@@ -143,24 +143,12 @@ function formatYear(value: number | null): string {
   return String(value);
 }
 
-function extractMediaUrls(rawValue: string): string[] {
-  if (!rawValue.trim()) {
-    return [];
-  }
-
-  const matches = rawValue.match(/https?:\/\/\S+/gi) ?? [];
-  return matches
-    .map((item) => item.replace(/[),.;]+$/g, "").trim())
-    .filter(Boolean);
-}
-
-function getItemPreviewUrl(item: CatalogItem): string | null {
-  const sourceUrls = extractMediaUrls(item.yandexDiskUrl);
-  if (sourceUrls.length === 0) {
+function getItemPreviewUrl(item: CatalogListItem): string | null {
+  if (!item.previewUrl) {
     return null;
   }
 
-  return getMediaPreviewImageUrl(sourceUrls[0]);
+  return getMediaPreviewImageUrl(item.previewUrl);
 }
 
 function getStatusTone(value: string): "neutral" | "positive" | "warning" {
@@ -183,7 +171,7 @@ function BrandLogo({ brand, src }: { brand: string; src: string }) {
   );
 }
 
-function ProductCard({ item }: { item: CatalogItem }) {
+function ProductCard({ item }: { item: CatalogListItem }) {
   const imageUrl = getItemPreviewUrl(item);
 
   return (

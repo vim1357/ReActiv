@@ -13,7 +13,7 @@ import {
 } from "../catalog/config";
 import type {
   CatalogFiltersResponse,
-  CatalogItem,
+  CatalogListItem,
   CatalogItemsResponse,
 } from "../types/api";
 
@@ -100,7 +100,7 @@ export function CatalogPage() {
     void loadItems();
   }, [query]);
 
-  const items: CatalogItem[] = itemsResponse?.items ?? [];
+  const items: CatalogListItem[] = itemsResponse?.items ?? [];
   const total = itemsResponse?.pagination.total ?? 0;
   const hasImportedData = total > 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));

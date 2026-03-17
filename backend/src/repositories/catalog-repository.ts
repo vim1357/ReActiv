@@ -73,6 +73,22 @@ export interface CatalogItem {
   createdAt: string;
 }
 
+export interface CatalogListItem {
+  id: number;
+  offerCode: string;
+  status: string;
+  brand: string;
+  model: string;
+  title: string;
+  year: number | null;
+  mileageKm: number | null;
+  price: number | null;
+  bookingStatus: string;
+  storageAddress: string;
+  responsiblePerson: string;
+  previewUrl: string | null;
+}
+
 function mapDbBoolean(value: number | null): boolean | null {
   if (value === 1) {
     return true;
@@ -81,6 +97,19 @@ function mapDbBoolean(value: number | null): boolean | null {
     return false;
   }
   return null;
+}
+
+function extractMediaUrls(rawValue: string): string[] {
+  if (!rawValue.trim()) {
+    return [];
+  }
+
+  const matches = rawValue.match(/https?:\/\/\S+/gi) ?? [];
+  const cleaned = matches
+    .map((item) => item.replace(/[),.;]+$/g, "").trim())
+    .filter(Boolean);
+
+  return [...new Set(cleaned)];
 }
 
 function mapDbRow(row: VehicleOfferDbRow): CatalogItem {
@@ -110,6 +139,26 @@ function mapDbRow(row: VehicleOfferDbRow): CatalogItem {
     websiteUrl: row.website_url,
     title: row.title,
     createdAt: row.created_at,
+  };
+}
+
+function toCatalogListItem(item: CatalogItem): CatalogListItem {
+  const mediaUrls = extractMediaUrls(item.yandexDiskUrl);
+
+  return {
+    id: item.id,
+    offerCode: item.offerCode,
+    status: item.status,
+    brand: item.brand,
+    model: item.model,
+    title: item.title,
+    year: item.year,
+    mileageKm: item.mileageKm,
+    price: item.price,
+    bookingStatus: item.bookingStatus,
+    storageAddress: item.storageAddress,
+    responsiblePerson: item.responsiblePerson,
+    previewUrl: mediaUrls[0] ?? null,
   };
 }
 
@@ -593,7 +642,7 @@ function buildWhere(filters: CatalogQuery): { whereClause: string; params: unkno
 }
 
 export function searchCatalogItems(filters: CatalogQuery): {
-  items: CatalogItem[];
+  items: CatalogListItem[];
   total: number;
   newThisWeekCount: number;
 } {
@@ -639,7 +688,7 @@ export function searchCatalogItems(filters: CatalogQuery): {
     const paginatedRows = filteredRows.slice(offset, offset + limit);
 
     return {
-      items: paginatedRows.map(mapDbRow),
+      items: paginatedRows.map(mapDbRow).map(toCatalogListItem),
       total: filteredRows.length,
       newThisWeekCount: newThisWeekRows.length,
     };
@@ -654,7 +703,7 @@ export function searchCatalogItems(filters: CatalogQuery): {
     .all(...params, limit, offset) as VehicleOfferDbRow[];
 
   return {
-    items: rows.map(mapDbRow),
+    items: rows.map(mapDbRow).map(toCatalogListItem),
     total: totalRow.total,
     newThisWeekCount: countNewThisWeekRowsBySql(whereClause, params),
   };

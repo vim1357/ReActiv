@@ -8,7 +8,7 @@ import {
 } from "../api/client";
 import type {
   CatalogFiltersResponse,
-  CatalogItem,
+  CatalogListItem,
   CatalogItemsResponse,
 } from "../types/api";
 
@@ -376,20 +376,7 @@ function formatPrice(price: number | null): string {
   return `${price.toLocaleString("ru-RU")} ₽`;
 }
 
-function extractMediaUrls(rawValue: string): string[] {
-  if (!rawValue.trim()) {
-    return [];
-  }
-
-  const matches = rawValue.match(/https?:\/\/\S+/gi) ?? [];
-  const cleaned = matches
-    .map((item) => item.replace(/[),.;]+$/g, "").trim())
-    .filter(Boolean);
-
-  return [...new Set(cleaned)];
-}
-
-function buildCardSubtitle(item: CatalogItem): string {
+function buildCardSubtitle(item: CatalogListItem): string {
   const yearPart = item.year !== null ? `${item.year} г` : "";
   const mileagePart =
     item.mileageKm !== null ? `${item.mileageKm.toLocaleString("ru-RU")} км` : "";
@@ -863,7 +850,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     writeShowcaseUiState(showcaseUiState);
   }, [showcaseUiState]);
 
-  const items: CatalogItem[] = itemsResponse?.items ?? [];
+  const items: CatalogListItem[] = itemsResponse?.items ?? [];
   const total = itemsResponse?.pagination.total ?? 0;
   const newThisWeekCount = itemsResponse?.newThisWeekCount ?? 0;
   const hasImportedData = total > 0;
@@ -1850,7 +1837,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
                   (RESO_TEST_VINS.has(item.offerCode)
                     ? `reso-vin:${item.offerCode}`
                     : undefined) ??
-                  extractMediaUrls(item.yandexDiskUrl)[0];
+                  item.previewUrl;
 
                 return (
                   <Link
