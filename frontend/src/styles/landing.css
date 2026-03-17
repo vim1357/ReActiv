@@ -14,15 +14,6 @@
   font-weight: 400;
 }
 
-.landing-page :is(p, a, span, li, strong) {
-  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
-  font-weight: 400;
-}
-
-.landing-page :is(h1, h2, h3) {
-  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
-}
-
 .landing-page__shell {
   width: min(1248px, calc(100% - 40px));
   margin: 0 auto;
@@ -358,7 +349,7 @@
 .landing-brand-card strong {
   display: block;
   color: #000;
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 18px;
   font-weight: 500;
   line-height: 24px;
@@ -447,7 +438,7 @@
 
 .landing-product-card__footer strong {
   color: #1e1e1e;
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 20px;
   font-weight: 700;
 }
@@ -670,7 +661,7 @@
 .landing-benefit-card h3 {
   margin: 0;
   color: #0e5ae7;
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 20px;
   font-weight: 400;
   line-height: 1;
@@ -746,7 +737,7 @@
   border-radius: 42px;
   background: #0e5ae7;
   color: #fff;
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 20px;
   font-weight: 400;
   line-height: 1;
@@ -755,7 +746,7 @@
 .landing-process-card p {
   margin: 0;
   color: #1e1e1e;
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 20px;
   font-weight: 400;
   line-height: 1.2;
@@ -805,7 +796,7 @@
 .landing-faq-card h3 {
   margin: 0;
   color: #1e1e1e;
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 24px;
   font-weight: 400;
   line-height: 1.333;
@@ -815,7 +806,7 @@
   max-width: 800px;
   margin: 0;
   color: rgba(30, 30, 30, 0.7);
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 1.4;
@@ -846,7 +837,7 @@
 .landing-footer-cta h2 {
   margin: 0;
   color: #fff;
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 24px;
   font-weight: 400;
   line-height: 1.333;
@@ -857,7 +848,7 @@
   max-width: 800px;
   margin: 0;
   color: rgba(255, 255, 255, 0.7);
-  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 1.4;
