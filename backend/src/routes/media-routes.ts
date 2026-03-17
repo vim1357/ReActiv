@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import type { FastifyInstance } from "fastify";
 import {
   resolveGalleryUrls,
@@ -38,14 +39,34 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
 
       const contentType =
         imageResponse.headers.get("content-type") ?? "image/jpeg";
-      const arrayBuffer = await imageResponse.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const cacheControl =
+        imageResponse.headers.get("cache-control") ??
+        "public, max-age=1800, stale-while-revalidate=86400";
+      const contentLength = imageResponse.headers.get("content-length");
+      const etag = imageResponse.headers.get("etag");
+      const lastModified = imageResponse.headers.get("last-modified");
+      const responseBody = imageResponse.body;
 
-      return reply
+      if (!responseBody) {
+        return reply.code(502).send({ message: "preview body missing" });
+      }
+
+      reply
         .code(200)
         .header("Content-Type", contentType)
-        .header("Cache-Control", "public, max-age=300")
-        .send(buffer);
+        .header("Cache-Control", cacheControl);
+
+      if (contentLength) {
+        reply.header("Content-Length", contentLength);
+      }
+      if (etag) {
+        reply.header("ETag", etag);
+      }
+      if (lastModified) {
+        reply.header("Last-Modified", lastModified);
+      }
+
+      return reply.send(Readable.fromWeb(responseBody as any));
     } catch {
       return reply.code(500).send({ message: "preview fetch failed" });
     }

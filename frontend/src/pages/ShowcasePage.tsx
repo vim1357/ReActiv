@@ -1883,6 +1883,8 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
                           <img
                             src={getMediaPreviewImageUrl(primaryMediaUrl)}
                             alt={item.title || `${item.brand} ${item.model}`}
+                            loading={index < 4 ? "eager" : "lazy"}
+                            decoding="async"
                             onError={(event) => {
                               const target = event.currentTarget;
                               target.style.display = "none";
