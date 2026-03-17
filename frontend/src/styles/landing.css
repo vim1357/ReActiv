@@ -547,6 +547,80 @@
   gap: 16px;
 }
 
+.landing-section--benefits {
+  padding-top: 32px;
+}
+
+.landing-section--benefits .landing-section__heading {
+  margin-bottom: 32px;
+}
+
+.landing-section--benefits .landing-section__heading h2 {
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.landing-benefits-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.landing-benefit-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 360px;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.landing-benefit-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.landing-benefit-card h3 {
+  margin: 0;
+  color: #0e5ae7;
+  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.landing-benefit-card__divider {
+  height: 1px;
+  background: #dddddd;
+}
+
+.landing-benefit-card p {
+  margin: 0;
+  color: #757575;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: -0.01em;
+}
+
+.landing-benefit-card__icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 42px;
+  background: #f1f1f1;
+  color: #0e5ae7;
+}
+
+.landing-benefit-card__icon-wrap svg {
+  width: 24px;
+  height: 24px;
+}
+
 .landing-info-card,
 .landing-step-card,
 .landing-faq-card {
@@ -629,6 +703,24 @@
   .landing-audience__intro h2,
   .landing-footer-cta h2 {
     font-size: 28px;
+  }
+
+  .landing-section--benefits .landing-section__heading h2 {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .landing-benefit-card {
+    min-height: auto;
+    gap: 20px;
+  }
+
+  .landing-benefit-card h3 {
+    font-size: 20px;
+  }
+
+  .landing-benefit-card p {
+    font-size: 14px;
   }
 
   .landing-explainer {
