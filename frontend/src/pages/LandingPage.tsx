@@ -40,6 +40,7 @@ interface BenefitCard {
 interface PopularBrand {
   name: string;
   query: string;
+  logoSrc: string;
 }
 
 const DEFAULT_METRICS: LandingMetrics = {
@@ -109,13 +110,13 @@ const FAQ_ITEMS: FaqItem[] = [
 
 const HERO_IMAGE_URL = "https://www.figma.com/api/mcp/asset/12cb40f8-13ec-42fe-8230-d7ed062e7a4c";
 const POPULAR_BRANDS: PopularBrand[] = [
-  { name: "Mercedes", query: "Mercedes-Benz" },
-  { name: "BMW", query: "BMW" },
-  { name: "SITRAK", query: "SITRAK" },
-  { name: "Shacman", query: "Shacman" },
-  { name: "Lexus", query: "Lexus" },
-  { name: "Li", query: "Li" },
-  { name: "Haval", query: "Haval" },
+  { name: "Mercedes", query: "Mercedes-Benz", logoSrc: "/brands/mersedes.png" },
+  { name: "BMW", query: "BMW", logoSrc: "/brands/bmw.png" },
+  { name: "SITRAK", query: "SITRAK", logoSrc: "/brands/sitrak.png" },
+  { name: "Shacman", query: "Shacman", logoSrc: "/brands/shacman.png" },
+  { name: "Lexus", query: "Lexus", logoSrc: "/brands/lexus.png" },
+  { name: "Li", query: "Li", logoSrc: "/brands/li.png" },
+  { name: "Haval", query: "Haval", logoSrc: "/brands/haval.png" },
 ];
 
 function formatPrice(value: number | null): string {
@@ -191,69 +192,9 @@ function MetricCard({
   );
 }
 
-function BrandLogo({ brand }: { brand: string }) {
-  if (brand === "Mercedes") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true" className="landing-brand-logo">
-        <circle cx="24" cy="24" r="22" fill="#fff" stroke="#111" strokeWidth="1.8" />
-        <path d="M24 10 L28.5 26.5 L24 22.8 L19.5 26.5 Z" fill="#111" />
-        <path d="M24 22.8 L11.5 31.8" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M24 22.8 L36.5 31.8" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  if (brand === "BMW") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true" className="landing-brand-logo">
-        <circle cx="24" cy="24" r="22" fill="#111" />
-        <circle cx="24" cy="24" r="18" fill="#fff" />
-        <path d="M24 24 V11 A13 13 0 0 1 37 24 Z" fill="#76a7ff" />
-        <path d="M24 24 H11 A13 13 0 0 1 24 11 Z" fill="#fff" />
-        <path d="M24 24 V37 A13 13 0 0 1 11 24 Z" fill="#76a7ff" />
-        <path d="M24 24 H37 A13 13 0 0 1 24 37 Z" fill="#fff" />
-        <circle cx="24" cy="24" r="12.5" fill="none" stroke="#111" strokeWidth="1.4" />
-        <text x="24" y="8.8" textAnchor="middle" fontSize="5.2" fontWeight="700" fill="#fff">
-          BMW
-        </text>
-      </svg>
-    );
-  }
-
-  if (brand === "Lexus") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true" className="landing-brand-logo">
-        <ellipse cx="24" cy="24" rx="21" ry="14.5" fill="none" stroke="#111" strokeWidth="1.8" />
-        <path d="M27 15.5 L18.8 15.5 L18.8 31.5 L30.8 31.5" fill="none" stroke="#111" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  if (brand === "Haval") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true" className="landing-brand-logo">
-        <rect x="4.5" y="14" width="39" height="20" rx="6" fill="#111" />
-        <text x="24" y="27.5" textAnchor="middle" fontSize="9" fontWeight="700" fill="#fff" letterSpacing="0.08em">
-          HAVAL
-        </text>
-      </svg>
-    );
-  }
-
-  if (brand === "Li") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true" className="landing-brand-logo">
-        <rect x="6" y="6" width="36" height="36" rx="12" fill="#111" />
-        <path d="M18 14 V34 H30" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M31 14 V34" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
+function BrandLogo({ brand, src }: { brand: string; src: string }) {
   return (
-    <div className={`landing-brand-wordmark landing-brand-wordmark--${brand.toLowerCase()}`}>
-      {brand}
-    </div>
+    <img className="landing-brand-logo" src={src} alt={`${brand} logo`} />
   );
 }
 
@@ -422,7 +363,7 @@ export function LandingPage() {
               >
                 <div className="landing-brand-card__top">
                   <div className="landing-brand-card__logo-wrap">
-                    <BrandLogo brand={brand.name} />
+                    <BrandLogo brand={brand.name} src={brand.logoSrc} />
                   </div>
                   <span className="landing-brand-card__arrow" aria-hidden="true">
                     ↗
