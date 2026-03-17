@@ -693,8 +693,14 @@
 .landing-benefit-card__icon-wrap {
   display: grid;
   place-items: center;
+  flex: 0 0 48px;
   width: 48px;
   height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  max-width: 48px;
+  max-height: 48px;
+  overflow: hidden;
   border-radius: 42px;
   background: #f1f1f1;
   color: #0e5ae7;
@@ -706,8 +712,13 @@
 }
 
 .landing-benefit-card__icon {
+  display: block;
   width: 24px;
   height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  max-width: 24px;
+  max-height: 24px;
   object-fit: contain;
 }
 
