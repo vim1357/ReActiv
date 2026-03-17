@@ -388,40 +388,11 @@ function extractMediaUrls(rawValue: string): string[] {
   return [...new Set(cleaned)];
 }
 
-function extractBracketDetails(value: string): string | null {
-  if (!value.trim()) {
-    return null;
-  }
-
-  const matches = [...value.matchAll(/\(([^()]+)\)/g)];
-  if (!matches.length) {
-    return null;
-  }
-
-  const detail = matches[matches.length - 1]?.[1]?.trim() ?? "";
-  return detail || null;
-}
-
 function buildCardSubtitle(item: CatalogItem): string {
-  const titleDetails = extractBracketDetails(item.title);
-  const modificationDetails = extractBracketDetails(item.modification);
-  const fallback = item.modification || item.vehicleType;
-  const rawDetails = titleDetails || modificationDetails || fallback;
-  const cleanedDetails = rawDetails
-    .replace(/\s+/g, " ")
-    .replace(/^\W+|\W+$/g, "")
-    .trim();
-
   const yearPart = item.year !== null ? `${item.year} г` : "";
   const mileagePart =
     item.mileageKm !== null ? `${item.mileageKm.toLocaleString("ru-RU")} км` : "";
-  const periodParts = [yearPart, mileagePart].filter(Boolean).join(", ");
-
-  if (!cleanedDetails) {
-    return periodParts;
-  }
-
-  return periodParts ? `${periodParts}, ${cleanedDetails}` : cleanedDetails;
+  return [yearPart, mileagePart].filter(Boolean).join(", ");
 }
 
 function normalizeIntegerInput(raw: string): string {
