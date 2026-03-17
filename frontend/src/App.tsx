@@ -246,7 +246,6 @@ export function App() {
               <Route path="/landing" element={<LandingPage />} />
               <Route path="*" element={<Navigate to="/landing" replace />} />
             </Routes>
-            <PublicLegalFooter />
           </div>
           <FeedbackWidget />
         </>
@@ -310,7 +309,7 @@ export function App() {
               <Route path="/login" element={loginElement} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-            <PublicLegalFooter />
+            {location.pathname !== "/landing" && <PublicLegalFooter />}
           </div>
           <FeedbackWidget />
         </>

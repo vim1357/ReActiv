@@ -1,28 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  getCatalogFilters,
   getCatalogItems,
-  getCatalogSummary,
   getMediaPreviewImageUrl,
   logActivityEvent,
 } from "../api/client";
+import { PrivacyPolicyLink, TermsLink } from "../components/LegalLinks";
 import type { CatalogItem } from "../types/api";
 import "../styles/landing.css";
 
 const PREPOSITION_NBSP_PATTERN =
   /(^|[\s([{'"«„-])(а|без|в|во|для|до|за|и|из|к|ко|на|над|не|ни|о|об|обо|от|по|под|при|про|с|со|у)\s+/giu;
 
-interface LandingMetrics {
-  total: number;
-  newThisWeekCount: number;
-  brandsCount: number;
-}
-
 interface LandingCatalogState {
   featuredItems: CatalogItem[];
-  brands: string[];
-  metrics: LandingMetrics;
 }
 
 interface FaqItem {
@@ -46,12 +37,6 @@ interface PopularBrand {
   query: string;
   logoSrc: string;
 }
-
-const DEFAULT_METRICS: LandingMetrics = {
-  total: 0,
-  newThisWeekCount: 0,
-  brandsCount: 0,
-};
 
 const BENEFIT_CARDS: BenefitCard[] = [
   {
@@ -116,7 +101,7 @@ const FAQ_ITEMS: FaqItem[] = [
   },
 ];
 
-const HERO_IMAGE_URL = "https://www.figma.com/api/mcp/asset/12cb40f8-13ec-42fe-8230-d7ed062e7a4c";
+const HERO_IMAGE_URL = "/auth-login-side.png";
 const BRANDS_ARROW_ICON_URL = "/brands/arrow-up-right.svg";
 const ABOUT_CHECKMARK_ICON_URL = "/brands/checkmark-icon.svg";
 const ABOUT_LEASING_TYPES = [
@@ -241,8 +226,6 @@ function ProductCard({ item }: { item: CatalogItem }) {
 export function LandingPage() {
   const [catalogState, setCatalogState] = useState<LandingCatalogState>({
     featuredItems: [],
-    brands: [],
-    metrics: DEFAULT_METRICS,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -256,16 +239,12 @@ export function LandingPage() {
       setError(null);
 
       try {
-        const [itemsResponse, summaryResponse, filtersResponse] = await Promise.all([
-          getCatalogItems({
-            page: 1,
-            pageSize: 4,
-            sortBy: "created_at",
-            sortDir: "desc",
-          }),
-          getCatalogSummary(),
-          getCatalogFilters(),
-        ]);
+        const itemsResponse = await getCatalogItems({
+          page: 1,
+          pageSize: 4,
+          sortBy: "created_at",
+          sortDir: "desc",
+        });
 
         if (!isMounted) {
           return;
@@ -273,12 +252,6 @@ export function LandingPage() {
 
         setCatalogState({
           featuredItems: itemsResponse.items.slice(0, 4),
-          brands: filtersResponse.brand.slice(0, 7),
-          metrics: {
-            total: itemsResponse.pagination.total,
-            newThisWeekCount: summaryResponse.newThisWeekCount,
-            brandsCount: filtersResponse.brand.length,
-          },
         });
       } catch (caughtError) {
         if (!isMounted) {
@@ -584,8 +557,8 @@ export function LandingPage() {
           <div className="landing-footer__content">
             <p className="landing-footer__meta">РеАктив | 2026</p>
             <div className="landing-footer__links">
-              <a href="#">Политика обработки персональных данных</a>
-              <a href="#">Пользовательское соглашение</a>
+              <PrivacyPolicyLink />
+              <TermsLink />
             </div>
           </div>
         </footer>
