@@ -10,6 +10,9 @@ import {
 import type { CatalogItem } from "../types/api";
 import "../styles/landing.css";
 
+const PREPOSITION_NBSP_PATTERN =
+  /\b(а|без|в|во|для|до|за|и|из|к|ко|на|над|не|ни|о|об|обо|от|по|под|при|про|с|со|у)\s+/gi;
+
 interface LandingMetrics {
   total: number;
   newThisWeekCount: number;
@@ -319,6 +322,27 @@ export function LandingPage() {
       document.body.style.overflow = "";
     };
   }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    const root = document.querySelector(".landing-page");
+    if (!root) {
+      return;
+    }
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let currentNode = walker.nextNode();
+
+    while (currentNode) {
+      const textNode = currentNode as Text;
+      const value = textNode.nodeValue;
+      if (value && value.includes(" ")) {
+        textNode.nodeValue = value.replace(PREPOSITION_NBSP_PATTERN, (_full, preposition: string) => {
+          return `${preposition}\u00A0`;
+        });
+      }
+      currentNode = walker.nextNode();
+    }
+  }, [catalogState, error, isLoading]);
 
   return (
     <section className="landing-page">
