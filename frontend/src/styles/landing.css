@@ -1061,7 +1061,8 @@
   }
 
   .landing-process-card {
-    height: 360px;
+    height: auto;
+    min-height: 0;
     gap: 20px;
   }
 
