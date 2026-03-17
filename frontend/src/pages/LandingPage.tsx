@@ -110,6 +110,13 @@ const FAQ_ITEMS: FaqItem[] = [
 
 const HERO_IMAGE_URL = "https://www.figma.com/api/mcp/asset/12cb40f8-13ec-42fe-8230-d7ed062e7a4c";
 const BRANDS_ARROW_ICON_URL = "/brands/arrow-up-right.svg";
+const ABOUT_CHECKMARK_ICON_URL = "/brands/checkmark-icon.svg";
+const ABOUT_LEASING_TYPES = [
+  "автомобили после завершения лизинга",
+  "изъятые автомобили",
+  "конфискат лизинговых компаний",
+  "корпоративные автомобили с пробегом",
+];
 const POPULAR_BRANDS: PopularBrand[] = [
   { name: "Mercedes", query: "Mercedes-Benz", logoSrc: "/brands/mersedes.png" },
   { name: "BMW", query: "BMW", logoSrc: "/brands/bmw.png" },
@@ -176,21 +183,6 @@ function getStatusTone(value: string): "neutral" | "positive" | "warning" {
   }
 
   return "neutral";
-}
-
-function MetricCard({
-  value,
-  label,
-}: {
-  value: string;
-  label: string;
-}) {
-  return (
-    <article className="landing-metric-card">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </article>
-  );
 }
 
 function BrandLogo({ brand, src }: { brand: string; src: string }) {
@@ -412,36 +404,41 @@ export function LandingPage() {
 
         <section id="about" className="landing-section">
           <div className="landing-explainer">
-            <div className="landing-explainer__main">
-              <span className="landing-section__eyebrow">Что такое автомобили после лизинга</span>
-              <h2>Покупать такие автомобили удобнее, когда все предложения собраны в одной витрине</h2>
-              <p>
-                ReActiv соединяет маркетинговый вход в продукт и действующий каталог. Пользователь
-                может сначала понять формат рынка, а потом сразу перейти к конкретным карточкам
-                автомобилей без лишнего ручного поиска.
-              </p>
-              <ul className="landing-check-list">
-                <li>Актуальные карточки лотов из действующего каталога</li>
-                <li>Понятные параметры для фильтрации и отбора</li>
-                <li>Прямой переход из лендинга в рабочую витрину</li>
-              </ul>
+            <div className="landing-explainer__headline">
+              <h2>Что такое автомобили после лизинга</h2>
+              <div className="landing-explainer__stats">
+                <article className="landing-explainer-stat">
+                  <strong>7000+</strong>
+                  <span>единиц техники</span>
+                </article>
+                <article className="landing-explainer-stat">
+                  <strong>500+</strong>
+                  <span>заявок обработано</span>
+                </article>
+              </div>
             </div>
 
-            <div className="landing-explainer__stats">
-              <MetricCard
-                value={catalogState.metrics.total > 0 ? String(catalogState.metrics.total) : "24/7"}
-                label="доступ к витрине"
-              />
-              <MetricCard
-                value={
-                  catalogState.metrics.newThisWeekCount > 0
-                    ? String(catalogState.metrics.newThisWeekCount)
-                    : "новые"
-                }
-                label="обновления каталога"
-              />
-              <Link className="landing-primary-button" to="/">
-                Смотреть каталог
+            <div className="landing-explainer__content">
+              <p className="landing-explainer__text">
+                Автомобили после лизинга - это машины, которые использовались компаниями по договору
+                лизинга и после завершения договора или его прекращения выставляются на продажу. В
+                продаже можно встретить несколько типов таких автомобилей:
+              </p>
+              <ul className="landing-check-list">
+                {ABOUT_LEASING_TYPES.map((item) => (
+                  <li key={item}>
+                    <img className="landing-check-list__icon" src={ABOUT_CHECKMARK_ICON_URL} alt="" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="landing-explainer__text">
+                Такие машины часто реализуются через площадки продажи лизинговых автомобилей.
+                Платформа Reactiv агрегирует предложения лизинговых компаний и формирует единый
+                каталог автомобилей после лизинга.
+              </p>
+              <Link className="landing-primary-button landing-explainer__button" to="/">
+                Смотреть каталог автомобилей
               </Link>
             </div>
           </div>
