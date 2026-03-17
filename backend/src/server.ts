@@ -47,6 +47,7 @@ const OPEN_MODE_PUBLIC_PREFIXES = [
   "/api/catalog/filters",
   "/api/media/preview",
   "/api/media/preview-image",
+  "/api/media/card-preview",
   "/api/media/gallery",
 ];
 

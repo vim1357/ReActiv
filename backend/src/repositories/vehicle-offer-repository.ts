@@ -27,12 +27,15 @@ export interface StoredVehicleOfferRow {
   crm_ref: string | null;
   website_url: string | null;
   title: string | null;
+  card_preview_path: string | null;
   created_at: string;
 }
 
 export interface VehicleOfferMediaCandidate {
+  tenantId: string;
   offerCode: string;
   yandexDiskUrl: string | null;
+  cardPreviewPath: string | null;
 }
 
 export interface VehicleOfferMediaCandidateWithWebsite extends VehicleOfferMediaCandidate {
@@ -89,7 +92,8 @@ function insertVehicleOfferIntoTable(
         external_id,
         crm_ref,
         website_url,
-        title
+        title,
+        card_preview_path
       ) VALUES (
         @import_batch_id,
         @tenant_id,
@@ -114,7 +118,8 @@ function insertVehicleOfferIntoTable(
         @external_id,
         @crm_ref,
         @website_url,
-        @title
+        @title,
+        @card_preview_path
       )
     `,
   ).run({
@@ -142,6 +147,7 @@ function insertVehicleOfferIntoTable(
     crm_ref: toDbText(row.crm_ref),
     website_url: toDbText(row.website_url),
     title: toDbText(row.title),
+    card_preview_path: "",
   });
 }
 
@@ -206,6 +212,7 @@ function mapStoredRow(row: {
   crm_ref: string;
   website_url: string;
   title: string;
+  card_preview_path: string;
   created_at: string;
 }): StoredVehicleOfferRow {
   return {
@@ -234,6 +241,7 @@ function mapStoredRow(row: {
     crm_ref: mapDbText(row.crm_ref),
     website_url: mapDbText(row.website_url),
     title: mapDbText(row.title),
+    card_preview_path: mapDbText(row.card_preview_path),
     created_at: row.created_at,
   };
 }
@@ -399,17 +407,26 @@ export function listVehicleOfferMediaCandidatesByTenant(
     .prepare(
       `
         SELECT offer_code, yandex_disk_url
+             , tenant_id
+             , card_preview_path
         FROM vehicle_offers
         WHERE tenant_id = ?
           AND TRIM(COALESCE(offer_code, '')) != ''
         ORDER BY id ASC
       `,
     )
-    .all(tenantId) as Array<{ offer_code: string; yandex_disk_url: string }>;
+    .all(tenantId) as Array<{
+    offer_code: string;
+    yandex_disk_url: string;
+    tenant_id: string;
+    card_preview_path: string;
+  }>;
 
   return rows.map((row) => ({
+    tenantId: row.tenant_id,
     offerCode: row.offer_code,
     yandexDiskUrl: mapDbText(row.yandex_disk_url),
+    cardPreviewPath: mapDbText(row.card_preview_path),
   }));
 }
 
@@ -419,7 +436,7 @@ export function listVehicleOfferMediaCandidatesWithWebsiteByTenant(
   const rows = db
     .prepare(
       `
-        SELECT offer_code, yandex_disk_url, website_url
+        SELECT offer_code, yandex_disk_url, website_url, tenant_id, card_preview_path
         FROM vehicle_offers
         WHERE tenant_id = ?
           AND TRIM(COALESCE(offer_code, '')) != ''
@@ -430,13 +447,47 @@ export function listVehicleOfferMediaCandidatesWithWebsiteByTenant(
     offer_code: string;
     yandex_disk_url: string;
     website_url: string;
+    tenant_id: string;
+    card_preview_path: string;
   }>;
 
   return rows.map((row) => ({
+    tenantId: row.tenant_id,
     offerCode: row.offer_code,
     yandexDiskUrl: mapDbText(row.yandex_disk_url),
+    cardPreviewPath: mapDbText(row.card_preview_path),
     websiteUrl: mapDbText(row.website_url),
   }));
+}
+
+export function updateVehicleOfferCardPreviewPathsByOfferCode(
+  tenantId: string,
+  updates: Array<{ offerCode: string; cardPreviewPath: string }>,
+): number {
+  if (updates.length === 0) {
+    return 0;
+  }
+
+  const updateStatement = db.prepare(
+    `
+      UPDATE vehicle_offers
+      SET card_preview_path = ?
+      WHERE tenant_id = ?
+        AND offer_code = ?
+    `,
+  );
+
+  return db.transaction(() => {
+    let updatedRows = 0;
+    for (const update of updates) {
+      updatedRows += updateStatement.run(
+        update.cardPreviewPath,
+        tenantId,
+        update.offerCode,
+      ).changes;
+    }
+    return updatedRows;
+  })();
 }
 
 export function updateVehicleOfferMediaUrlsByOfferCode(

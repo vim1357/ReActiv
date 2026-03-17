@@ -1,5 +1,6 @@
 import { db } from "../db/connection";
 import type { CatalogQuery } from "../catalog/catalog-query";
+import { buildStoredPreviewSourceUrl } from "../services/local-media-storage";
 import {
   getLatestSuccessfulImportBatch,
   getLatestSuccessfulImportBatchId,
@@ -42,6 +43,7 @@ interface VehicleOfferDbRow {
   crm_ref: string;
   website_url: string;
   title: string;
+  card_preview_path: string;
   created_at: string;
 }
 
@@ -70,6 +72,7 @@ export interface CatalogItem {
   crmRef: string;
   websiteUrl: string;
   title: string;
+  cardPreviewPath: string;
   createdAt: string;
 }
 
@@ -138,6 +141,7 @@ function mapDbRow(row: VehicleOfferDbRow): CatalogItem {
     crmRef: row.crm_ref,
     websiteUrl: row.website_url,
     title: row.title,
+    cardPreviewPath: row.card_preview_path,
     createdAt: row.created_at,
   };
 }
@@ -158,7 +162,9 @@ function toCatalogListItem(item: CatalogItem): CatalogListItem {
     bookingStatus: item.bookingStatus,
     storageAddress: item.storageAddress,
     responsiblePerson: item.responsiblePerson,
-    previewUrl: mediaUrls[0] ?? null,
+    previewUrl: item.cardPreviewPath
+      ? buildStoredPreviewSourceUrl(item.cardPreviewPath)
+      : (mediaUrls[0] ?? null),
   };
 }
 

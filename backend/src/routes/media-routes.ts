@@ -1,11 +1,44 @@
 import { Readable } from "node:stream";
+import fs from "node:fs";
 import type { FastifyInstance } from "fastify";
+import {
+  parseStoredPreviewSourceUrl,
+  resolveStoredMediaAbsolutePath,
+} from "../services/local-media-storage";
 import {
   resolveGalleryUrls,
   resolvePreviewUrl,
 } from "../services/media-preview-service";
 
 export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/api/media/card-preview", async (request, reply) => {
+    const query = request.query as { path?: string };
+    const relativePath = query.path?.trim();
+
+    if (!relativePath) {
+      return reply.code(400).send({ message: "path is required" });
+    }
+
+    try {
+      const absolutePath = resolveStoredMediaAbsolutePath(relativePath);
+      if (!fs.existsSync(absolutePath)) {
+        return reply.code(404).send({ message: "stored preview not found" });
+      }
+
+      const stats = fs.statSync(absolutePath);
+      reply
+        .code(200)
+        .header("Content-Type", "image/jpeg")
+        .header("Content-Length", stats.size.toString())
+        .header("Last-Modified", stats.mtime.toUTCString())
+        .header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+
+      return reply.send(fs.createReadStream(absolutePath));
+    } catch {
+      return reply.code(400).send({ message: "invalid stored preview path" });
+    }
+  });
+
   app.get("/api/media/preview", async (request, reply) => {
     const query = request.query as { url?: string };
     const sourceUrl = query.url?.trim();
@@ -24,6 +57,31 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
 
     if (!sourceUrl) {
       return reply.code(400).send({ message: "url is required" });
+    }
+
+    const storedPreviewRelativePath = parseStoredPreviewSourceUrl(sourceUrl);
+    if (storedPreviewRelativePath) {
+      try {
+        const absolutePath = resolveStoredMediaAbsolutePath(storedPreviewRelativePath);
+        if (!fs.existsSync(absolutePath)) {
+          return reply.code(404).send({ message: "stored preview not found" });
+        }
+
+        const stats = fs.statSync(absolutePath);
+        reply
+          .code(200)
+          .header("Content-Type", "image/jpeg")
+          .header("Content-Length", stats.size.toString())
+          .header("Last-Modified", stats.mtime.toUTCString())
+          .header(
+            "Cache-Control",
+            "public, max-age=86400, stale-while-revalidate=604800",
+          );
+
+        return reply.send(fs.createReadStream(absolutePath));
+      } catch {
+        return reply.code(400).send({ message: "invalid stored preview path" });
+      }
     }
 
     const resolved = await resolvePreviewUrl(sourceUrl);

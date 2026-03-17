@@ -26,6 +26,7 @@ const ACTIVITY_SESSION_KEY = "activity_session_id_v1";
 const ACTIVITY_ATTRIBUTION_KEY = "activity_attribution_v1";
 const MEDIA_GALLERY_CACHE_TTL_MS = 5 * 60 * 1000;
 const mediaGalleryCache = new Map<string, { galleryUrls: string[]; expiresAt: number }>();
+const STORED_PREVIEW_PREFIX = "stored-preview:";
 
 function buildUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
@@ -612,6 +613,14 @@ export async function clearImports(
 }
 
 export function getMediaPreviewImageUrl(sourceUrl: string): string {
+  if (sourceUrl.startsWith(STORED_PREVIEW_PREFIX)) {
+    return buildUrl(
+      `/media/card-preview?path=${encodeURIComponent(
+        sourceUrl.slice(STORED_PREVIEW_PREFIX.length),
+      )}`,
+    );
+  }
+
   return buildUrl(`/media/preview-image?url=${encodeURIComponent(sourceUrl)}`);
 }
 

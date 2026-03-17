@@ -27,6 +27,7 @@ const VEHICLE_OFFER_COLUMNS = [
   "crm_ref",
   "website_url",
   "title",
+  "card_preview_path",
   "created_at",
 ] as const;
 
@@ -58,6 +59,7 @@ function createVehicleOffersTableSql(tableName: string): string {
       crm_ref TEXT NOT NULL,
       website_url TEXT NOT NULL,
       title TEXT NOT NULL,
+      card_preview_path TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (import_batch_id) REFERENCES import_batches(id)
     );
@@ -111,6 +113,23 @@ function ensureTenantColumn(tableName: string): void {
   const hasTenantColumn = columns.some((column) => column.name === "tenant_id");
   if (!hasTenantColumn) {
     db.exec(`ALTER TABLE ${tableName} ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'gpb';`);
+  }
+}
+
+function ensureCardPreviewPathColumn(
+  tableName: "vehicle_offers" | "vehicle_offer_snapshots",
+): void {
+  const columns = db
+    .prepare(`PRAGMA table_info(${tableName})`)
+    .all() as Array<{ name: string }>;
+
+  const hasCardPreviewPathColumn = columns.some(
+    (column) => column.name === "card_preview_path",
+  );
+  if (!hasCardPreviewPathColumn) {
+    db.exec(
+      `ALTER TABLE ${tableName} ADD COLUMN card_preview_path TEXT NOT NULL DEFAULT '';`,
+    );
   }
 }
 
@@ -314,6 +333,8 @@ export function initializeSchema(): void {
   ensureTenantColumn("import_errors");
   ensureTenantColumn("vehicle_offers");
   ensureTenantColumn("vehicle_offer_snapshots");
+  ensureCardPreviewPathColumn("vehicle_offers");
+  ensureCardPreviewPathColumn("vehicle_offer_snapshots");
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_import_batches_tenant_created_at ON import_batches(tenant_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_import_errors_tenant_created_at ON import_errors(tenant_id, created_at);
