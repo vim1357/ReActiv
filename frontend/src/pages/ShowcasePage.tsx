@@ -413,7 +413,15 @@ function buildCardSubtitle(item: CatalogItem): string {
     .trim();
 
   const yearPart = item.year !== null ? `${item.year} г` : "";
-  return yearPart ? `${yearPart}, ${cleanedDetails}` : cleanedDetails;
+  const mileagePart =
+    item.mileageKm !== null ? `${item.mileageKm.toLocaleString("ru-RU")} км` : "";
+  const periodParts = [yearPart, mileagePart].filter(Boolean).join(", ");
+
+  if (!cleanedDetails) {
+    return periodParts;
+  }
+
+  return periodParts ? `${periodParts}, ${cleanedDetails}` : cleanedDetails;
 }
 
 function normalizeIntegerInput(raw: string): string {
