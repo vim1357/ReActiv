@@ -592,14 +592,11 @@ export function LandingPage() {
 
         <section className="landing-section landing-section--footer-cta">
           <div className="landing-footer-cta">
-            <div>
+            <div className="landing-footer-cta__content">
               <h2>Смотреть автомобили после лизинга</h2>
-              <p>
-                Перейди в действующий каталог ReActiv и открой актуальные лоты, карточки и параметры
-                автомобилей.
-              </p>
+              <p>Перейдите в каталог и найдите автомобиль</p>
             </div>
-            <Link className="landing-primary-button" to="/">
+            <Link className="landing-footer-cta__button" to="/">
               Перейти
             </Link>
           </div>

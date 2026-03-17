@@ -769,6 +769,7 @@
 }
 
 .landing-section--footer-cta {
+  padding-top: 32px;
   padding-bottom: 0;
 }
 
@@ -776,8 +777,54 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 10px;
+  padding: 24px;
   border-radius: 24px;
+  background: linear-gradient(313deg, #1476ff 0%, #0123b9 100%);
+}
+
+.landing-footer-cta__content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.landing-footer-cta h2 {
+  margin: 0;
+  color: #fff;
+  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.333;
+  letter-spacing: 0;
+}
+
+.landing-footer-cta p {
+  max-width: 800px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Inter", "IBM Plex Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.landing-footer-cta__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: #fff;
+  color: #1067f2;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 @media (max-width: 1280px) {
@@ -873,6 +920,17 @@
 
   .landing-faq-card h3 {
     font-size: 20px;
+    line-height: 1.25;
+  }
+
+  .landing-footer-cta {
+    width: 100%;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .landing-footer-cta h2 {
+    font-size: 22px;
     line-height: 1.25;
   }
 
