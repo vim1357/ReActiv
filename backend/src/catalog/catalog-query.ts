@@ -68,6 +68,15 @@ function toOptionalBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
+function toOptionalString(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim();
+  return normalized ? normalized : undefined;
+}
+
 const arrayField = z.preprocess(toStringArray, z.array(z.string()).optional());
 const numberField = z.preprocess(toOptionalNumber, z.number().optional());
 const booleanArrayField = z.preprocess(
@@ -96,6 +105,8 @@ const catalogQuerySchema = z.object({
   yandexDiskUrl: arrayField,
   search: z.preprocess((value) => toStringArray(value)?.[0], z.string().optional()),
   newThisWeek: booleanField,
+  randomMix: booleanField,
+  randomSeed: z.preprocess(toOptionalString, z.string().max(128).optional()),
   sortBy: z
     .enum(["created_at", "price", "year", "mileage_km", "days_on_sale"])
     .default("created_at"),

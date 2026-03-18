@@ -74,6 +74,7 @@ const SHOWCASE_UI_STATE_KEY = "showcase_ui_state_v1";
 const SHOWCASE_RETURN_FLAG_KEY = "showcase_return_pending_v1";
 const SHOWCASE_SCROLL_Y_KEY = "showcase_scroll_y_v1";
 const SHOWCASE_PAGE_SIZE = 20;
+const SHOWCASE_RANDOMIZED_MAX_PAGE = 3;
 const SHOWCASE_DEFAULT_SORT_BY = "created_at";
 const SHOWCASE_DEFAULT_SORT_DIR: SortDirection = "desc";
 const SHOWCASE_DEFAULT_DATE_SORT_DIR: SortDirection = "desc";
@@ -127,6 +128,14 @@ function createDefaultShowcaseUiState(): ShowcaseUiState {
     viewMode: SHOWCASE_DEFAULT_VIEW_MODE,
     page: 1,
   };
+}
+
+function createShowcaseRandomMixSeed(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function isBookingPreset(value: string): value is BookingPreset {
@@ -475,6 +484,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
   const hasLoggedShowcaseOpenRef = useRef(false);
   const hasLoggedInitialFiltersRef = useRef(false);
   const hasLoggedInitialPageRef = useRef(false);
+  const randomMixSeedRef = useRef(createShowcaseRandomMixSeed());
   const lastNoResultsSignatureRef = useRef("");
   const previousFilterSnapshotRef = useRef<FilterTrackingSnapshot | null>(null);
   const skipNextUrlToStateSyncRef = useRef(false);
@@ -613,6 +623,52 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     });
   }, []);
 
+  const shouldUseMainShowcaseRandomMix = useMemo(() => {
+    if (!publicMode) {
+      return false;
+    }
+
+    if (page > SHOWCASE_RANDOMIZED_MAX_PAGE) {
+      return false;
+    }
+
+    if (sortBy !== SHOWCASE_DEFAULT_SORT_BY || sortDir !== SHOWCASE_DEFAULT_SORT_DIR) {
+      return false;
+    }
+
+    return !(
+      bookingPreset ||
+      city ||
+      brand ||
+      model ||
+      priceMin ||
+      priceMax ||
+      yearMin ||
+      yearMax ||
+      mileageMin ||
+      mileageMax ||
+      newThisWeekOnly ||
+      selectedVehicleTypes.length > 0
+    );
+  }, [
+    bookingPreset,
+    brand,
+    city,
+    mileageMax,
+    mileageMin,
+    model,
+    newThisWeekOnly,
+    page,
+    priceMax,
+    priceMin,
+    publicMode,
+    selectedVehicleTypes.length,
+    sortBy,
+    sortDir,
+    yearMax,
+    yearMin,
+  ]);
+
   const query = useMemo(() => {
     const queryObject: Record<string, string | number | string[]> = {
       page,
@@ -657,6 +713,10 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     if (newThisWeekOnly) {
       queryObject.newThisWeek = "true";
     }
+    if (shouldUseMainShowcaseRandomMix) {
+      queryObject.randomMix = "true";
+      queryObject.randomSeed = randomMixSeedRef.current;
+    }
 
     return queryObject;
   }, [
@@ -673,6 +733,7 @@ export function ShowcasePage({ publicMode = false }: ShowcasePageProps) {
     selectedVehicleTypes,
     sortBy,
     sortDir,
+    shouldUseMainShowcaseRandomMix,
     yearMax,
     yearMin,
   ]);

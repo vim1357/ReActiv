@@ -12,6 +12,8 @@ import {
 import { listVehicleOfferSnapshotCodesByImportBatchId } from "./vehicle-offer-repository";
 
 const FILTERS_METADATA_CACHE_TTL_MS = 5 * 60 * 1000;
+const MAIN_SHOWCASE_MIX_CACHE_TTL_MS = 60 * 60 * 1000;
+const MAIN_SHOWCASE_RANDOMIZED_MAX_PAGE = 3;
 
 let filtersMetadataCache:
   | {
@@ -20,6 +22,13 @@ let filtersMetadataCache:
       value: Record<string, unknown>;
     }
   | null = null;
+
+interface MainShowcaseMixCache {
+  expiresAt: number;
+  orderedOfferIds: number[];
+}
+
+let mainShowcaseMixCache: MainShowcaseMixCache | null = null;
 
 interface VehicleOfferDbRow {
   id: number;
@@ -170,6 +179,233 @@ function toCatalogListItem(item: CatalogItem): CatalogListItem {
       ? buildStoredPreviewSourceUrl(item.cardPreviewPath)
       : mediaUrls[0] ?? null,
   };
+}
+
+function computeDeterministicHash(input: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createSeededRandom(seed: number): () => number {
+  let state = seed >>> 0;
+  if (state === 0) {
+    state = 1;
+  }
+
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+}
+
+function shuffleInPlace<T>(items: T[], random: () => number): void {
+  for (let index = items.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [items[index], items[swapIndex]] = [items[swapIndex], items[index]];
+  }
+}
+
+function getPriceBucket(price: number | null): string {
+  if (price === null || !Number.isFinite(price)) {
+    return "unknown";
+  }
+  if (price < 1_000_000) {
+    return "lt_1m";
+  }
+  if (price < 3_000_000) {
+    return "1m_3m";
+  }
+  if (price < 7_000_000) {
+    return "3m_7m";
+  }
+  if (price < 15_000_000) {
+    return "7m_15m";
+  }
+  return "gte_15m";
+}
+
+function normalizeMixDimension(value: string): string {
+  const normalized = value.trim();
+  return normalized || "unknown";
+}
+
+function buildMainShowcaseMixOrder(now: number): number[] {
+  const candidateRows = db
+    .prepare(
+      `
+      SELECT id, vehicle_type, modification, price
+      FROM vehicle_offers
+      WHERE TRIM(COALESCE(card_preview_path, '')) != ''
+         OR TRIM(COALESCE(yandex_disk_url, '')) != ''
+      `,
+    )
+    .all() as Array<{
+    id: number;
+    vehicle_type: string;
+    modification: string;
+    price: number | null;
+  }>;
+
+  if (candidateRows.length === 0) {
+    return [];
+  }
+
+  const hourSeed = new Date(now).toISOString().slice(0, 13);
+  const random = createSeededRandom(computeDeterministicHash(`main_mix:${hourSeed}`));
+  const groups = new Map<string, number[]>();
+
+  candidateRows.forEach((row) => {
+    const groupKey = [
+      normalizeMixDimension(row.vehicle_type),
+      normalizeMixDimension(row.modification),
+      getPriceBucket(row.price),
+    ].join("|");
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, []);
+    }
+    groups.get(groupKey)?.push(row.id);
+  });
+
+  const groupedQueues = Array.from(groups.values());
+  groupedQueues.forEach((queue) => shuffleInPlace(queue, random));
+  shuffleInPlace(groupedQueues, random);
+
+  const result: number[] = [];
+  let hasRemaining = true;
+  while (hasRemaining) {
+    hasRemaining = false;
+    groupedQueues.forEach((queue) => {
+      const nextId = queue.pop();
+      if (nextId !== undefined) {
+        result.push(nextId);
+        hasRemaining = true;
+      }
+    });
+  }
+
+  return result;
+}
+
+function getMainShowcaseMixOrder(now = Date.now()): number[] {
+  if (mainShowcaseMixCache && mainShowcaseMixCache.expiresAt > now) {
+    return mainShowcaseMixCache.orderedOfferIds;
+  }
+
+  const orderedOfferIds = buildMainShowcaseMixOrder(now);
+  mainShowcaseMixCache = {
+    expiresAt: now + MAIN_SHOWCASE_MIX_CACHE_TTL_MS,
+    orderedOfferIds,
+  };
+
+  return orderedOfferIds;
+}
+
+function hasAnyCatalogFilters(filters: CatalogQuery): boolean {
+  return Boolean(
+    filters.offerCode?.length ||
+      filters.status?.length ||
+      filters.city?.length ||
+      filters.brand?.length ||
+      filters.model?.length ||
+      filters.modification?.length ||
+      filters.vehicleType?.length ||
+      filters.ptsType?.length ||
+      filters.hasEncumbrance?.length ||
+      filters.isDeregistered?.length ||
+      filters.responsiblePerson?.length ||
+      filters.storageAddress?.length ||
+      filters.bookingStatus?.length ||
+      filters.externalId?.length ||
+      filters.crmRef?.length ||
+      filters.websiteUrl?.length ||
+      filters.yandexDiskUrl?.length ||
+      filters.search ||
+      filters.newThisWeek ||
+      filters.priceMin !== undefined ||
+      filters.priceMax !== undefined ||
+      filters.yearMin !== undefined ||
+      filters.yearMax !== undefined ||
+      filters.mileageMin !== undefined ||
+      filters.mileageMax !== undefined ||
+      filters.keyCountMin !== undefined ||
+      filters.keyCountMax !== undefined ||
+      filters.daysOnSaleMin !== undefined ||
+      filters.daysOnSaleMax !== undefined,
+  );
+}
+
+function shouldUseMainShowcaseRandomMix(filters: CatalogQuery): boolean {
+  if (!filters.randomMix) {
+    return false;
+  }
+
+  if (filters.page > MAIN_SHOWCASE_RANDOMIZED_MAX_PAGE) {
+    return false;
+  }
+
+  if (filters.sortBy !== "created_at" || filters.sortDir !== "desc") {
+    return false;
+  }
+
+  return !hasAnyCatalogFilters(filters);
+}
+
+function getRandomizedWindowFromOrderedIds(
+  orderedIds: number[],
+  randomSeed: string,
+  page: number,
+  pageSize: number,
+): number[] {
+  if (orderedIds.length === 0) {
+    return [];
+  }
+
+  const offset = computeDeterministicHash(randomSeed) % orderedIds.length;
+  const start = (page - 1) * pageSize;
+  const endExclusive = Math.min(start + pageSize, orderedIds.length);
+
+  if (start >= endExclusive) {
+    return [];
+  }
+
+  const pageIds: number[] = [];
+  for (let index = start; index < endExclusive; index += 1) {
+    const rotatedIndex = (offset + index) % orderedIds.length;
+    pageIds.push(orderedIds[rotatedIndex]);
+  }
+
+  return pageIds;
+}
+
+function listRowsByIdsPreservingOrder(ids: number[]): VehicleOfferDbRow[] {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const placeholders = ids.map(() => "?").join(", ");
+  const rows = db
+    .prepare(
+      `
+      SELECT *
+      FROM vehicle_offers
+      WHERE id IN (${placeholders})
+      `,
+    )
+    .all(...ids) as VehicleOfferDbRow[];
+
+  const rowsById = new Map<number, VehicleOfferDbRow>();
+  rows.forEach((row) => {
+    rowsById.set(row.id, row);
+  });
+
+  return ids
+    .map((id) => rowsById.get(id))
+    .filter((row): row is VehicleOfferDbRow => Boolean(row));
 }
 
 function addInFilter(
@@ -657,6 +893,28 @@ export function searchCatalogItems(filters: CatalogQuery): {
   newThisWeekCount: number;
 } {
   const { whereClause, params } = buildWhere(filters);
+  if (shouldUseMainShowcaseRandomMix(filters)) {
+    const orderedOfferIds = getMainShowcaseMixOrder();
+    const randomSeed = filters.randomSeed?.trim() || String(Date.now());
+    const pageIds = getRandomizedWindowFromOrderedIds(
+      orderedOfferIds,
+      randomSeed,
+      filters.page,
+      filters.pageSize,
+    );
+    const rows = listRowsByIdsPreservingOrder(pageIds);
+
+    const totalRow = db
+      .prepare(`SELECT COUNT(*) as total FROM vehicle_offers ${whereClause}`)
+      .get(...params) as { total: number };
+
+    return {
+      items: rows.map(mapDbRow).map(toCatalogListItem),
+      total: totalRow.total,
+      newThisWeekCount: countNewThisWeekRowsBySql(whereClause, params),
+    };
+  }
+
   const requestedRegions = normalizeRequestedRegions(filters.city);
   const shouldFilterByRegion = requestedRegions.size > 0;
   const shouldFilterByNewThisWeek = filters.newThisWeek === true;
