@@ -100,7 +100,9 @@ const FAQ_ITEMS: FaqItem[] = [
   },
 ];
 
-const HERO_IMAGE_URL = "/landing-hero.jpg";
+const HERO_IMAGE_FALLBACK_URL = "/landing-hero-1400.jpg";
+const HERO_IMAGE_WEBP_SRC_SET = "/landing-hero-900.webp 900w, /landing-hero-1400.webp 1400w";
+const HERO_IMAGE_JPEG_SRC_SET = "/landing-hero-900.jpg 900w, /landing-hero-1400.jpg 1400w";
 const BRANDS_ARROW_ICON_URL = "/brands/arrow-up-right.svg";
 const ABOUT_CHECKMARK_ICON_URL = "/brands/checkmark-icon.svg";
 const ABOUT_LEASING_TYPES = [
@@ -295,7 +297,23 @@ export function LandingPage() {
           </div>
 
           <div className="landing-hero__media">
-            <img src={HERO_IMAGE_URL} alt="Автомобиль после лизинга" />
+            <picture>
+              <source
+                type="image/webp"
+                srcSet={HERO_IMAGE_WEBP_SRC_SET}
+                sizes="(max-width: 900px) 100vw, 52vw"
+              />
+              <img
+                src={HERO_IMAGE_FALLBACK_URL}
+                srcSet={HERO_IMAGE_JPEG_SRC_SET}
+                sizes="(max-width: 900px) 100vw, 52vw"
+                width={1400}
+                height={964}
+                fetchPriority="high"
+                decoding="async"
+                alt="Автомобиль после лизинга"
+              />
+            </picture>
           </div>
         </div>
 
