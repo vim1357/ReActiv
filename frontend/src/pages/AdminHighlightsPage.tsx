@@ -23,12 +23,22 @@ interface HighlightsKpiSnapshot {
   importsLast7Days: number;
   importsPrev7Days: number;
   imports7dDeltaPercent: number | null;
+  tenantGrowthPoints: TenantGrowthPoint[];
 }
 
 interface WeeklyHighlightItem {
   period: string;
   title: string;
   points: string[];
+}
+
+interface TenantGrowthPoint {
+  tenantId: ImportTenantId;
+  label: string;
+  shortLabel: string;
+  stockCount: number;
+  cumulativeStock: number;
+  cumulativeTenantCount: number;
 }
 
 interface MetricTrend {
@@ -53,12 +63,20 @@ interface HighlightMetricGroup {
 }
 
 const PHOTO_COVERAGE_GOAL_PERCENT = 85;
+const TENANT_GROWTH_ORDER: ImportTenantId[] = ["gpb", "reso", "alpha", "sovcombank"];
 
 const TENANT_LABELS: Record<ImportTenantId, string> = {
   gpb: "ГПБ Лизинг",
   reso: "РЕСО-Лизинг",
   alpha: "Альфа-Лизинг",
   sovcombank: "Совкомбанк Лизинг",
+};
+
+const TENANT_SHORT_LABELS: Record<ImportTenantId, string> = {
+  gpb: "ГПБ",
+  reso: "РЕСО",
+  alpha: "АЛЬФА",
+  sovcombank: "СОВКОМ",
 };
 
 const WEEKLY_HIGHLIGHTS: WeeklyHighlightItem[] = [
@@ -204,6 +222,139 @@ function getProductStatus(snapshot: HighlightsKpiSnapshot | null): {
   };
 }
 
+interface GrowthChartPoint {
+  stepLabel: string;
+  value: number;
+  detail: string;
+}
+
+interface InvestorGrowthChartProps {
+  title: string;
+  subtitle: string;
+  points: GrowthChartPoint[];
+  valueFormatter: (value: number) => string;
+}
+
+function buildSvgPath(points: Array<{ x: number; y: number }>): string {
+  if (points.length === 0) {
+    return "";
+  }
+
+  return points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(" ");
+}
+
+function InvestorGrowthChart({
+  title,
+  subtitle,
+  points,
+  valueFormatter,
+}: InvestorGrowthChartProps) {
+  const width = 660;
+  const height = 250;
+  const left = 44;
+  const right = 14;
+  const top = 18;
+  const bottom = 56;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxValue = Math.max(1, ...points.map((item) => item.value));
+  const yTickCount = 4;
+
+  const chartPoints = points.map((item, index) => {
+    const ratioX = points.length > 1 ? index / (points.length - 1) : 0;
+    const x = left + ratioX * plotWidth;
+    const y = top + plotHeight - (item.value / maxValue) * plotHeight;
+    return { ...item, x, y };
+  });
+
+  const linePath = buildSvgPath(chartPoints);
+  const areaPath =
+    chartPoints.length > 0
+      ? `${linePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(2)} ${(top + plotHeight).toFixed(2)} L ${chartPoints[0].x.toFixed(2)} ${(top + plotHeight).toFixed(2)} Z`
+      : "";
+
+  return (
+    <article className="highlights-chart-card">
+      <header className="highlights-chart-card__header">
+        <h3>{title}</h3>
+        <p>{subtitle}</p>
+      </header>
+
+      <div className="highlights-chart-card__svg-wrap">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
+          {[...Array(yTickCount + 1).keys()].map((step) => {
+            const ratio = step / yTickCount;
+            const y = top + plotHeight - ratio * plotHeight;
+            const value = Math.round(maxValue * ratio);
+            return (
+              <g key={`y-grid-${step}`}>
+                <line
+                  x1={left}
+                  y1={y}
+                  x2={width - right}
+                  y2={y}
+                  className="highlights-chart-card__grid-line"
+                />
+                <text
+                  x={left - 8}
+                  y={y + 4}
+                  textAnchor="end"
+                  className="highlights-chart-card__axis-label"
+                >
+                  {valueFormatter(value)}
+                </text>
+              </g>
+            );
+          })}
+
+          {areaPath ? (
+            <path d={areaPath} className="highlights-chart-card__area" />
+          ) : null}
+          {linePath ? (
+            <path d={linePath} className="highlights-chart-card__line" />
+          ) : null}
+
+          {chartPoints.map((point) => (
+            <g key={`point-${point.stepLabel}`}>
+              <circle cx={point.x} cy={point.y} r={5} className="highlights-chart-card__point" />
+              <text
+                x={point.x}
+                y={point.y - 10}
+                textAnchor="middle"
+                className="highlights-chart-card__value-label"
+              >
+                {valueFormatter(point.value)}
+              </text>
+              <text
+                x={point.x}
+                y={height - 20}
+                textAnchor="middle"
+                className="highlights-chart-card__x-label"
+              >
+                {point.stepLabel}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      <ol className="highlights-chart-card__steps">
+        {points.map((point, index) => (
+          <li key={`step-${point.stepLabel}`}>
+            <span>{index + 1}</span>
+            <p>
+              <strong>{point.stepLabel}</strong>
+              <em>{point.detail}</em>
+            </p>
+          </li>
+        ))}
+      </ol>
+    </article>
+  );
+}
+
 export function AdminHighlightsPage() {
   const [snapshot, setSnapshot] = useState<HighlightsKpiSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -218,13 +369,23 @@ export function AdminHighlightsPage() {
       setError(null);
 
       try {
-        const [totalResult, withPreviewResult, summaryResult, filtersResult, importResult] =
+        const [
+          totalResult,
+          withPreviewResult,
+          summaryResult,
+          filtersResult,
+          importResult,
+          ...tenantTotalsResults
+        ] =
           await Promise.all([
             getCatalogItems({ page: 1, pageSize: 1 }),
             getCatalogItems({ page: 1, pageSize: 1, onlyWithPreview: "true" }),
             getCatalogSummary(),
             getCatalogFilters(),
             getImportBatches(200),
+            ...TENANT_GROWTH_ORDER.map((tenantId) =>
+              getCatalogItems({ page: 1, pageSize: 1, tenantId }),
+            ),
           ]);
 
         if (!isMounted) {
@@ -280,6 +441,25 @@ export function AdminHighlightsPage() {
 
         const imports7dDeltaPercent = getDeltaPercent(importsLast7Days, importsPrev7Days || null);
 
+        const tenantRawPoints = TENANT_GROWTH_ORDER.map((tenantId, index) => ({
+          tenantId,
+          label: TENANT_LABELS[tenantId],
+          shortLabel: TENANT_SHORT_LABELS[tenantId],
+          stockCount: tenantTotalsResults[index]?.pagination.total ?? 0,
+        })).filter((point) => point.stockCount > 0);
+
+        let runningStock = 0;
+        let runningTenantCount = 0;
+        const tenantGrowthPoints: TenantGrowthPoint[] = tenantRawPoints.map((point) => {
+          runningStock += point.stockCount;
+          runningTenantCount += 1;
+          return {
+            ...point,
+            cumulativeStock: runningStock,
+            cumulativeTenantCount: runningTenantCount,
+          };
+        });
+
         setSnapshot({
           totalOffers,
           offersWithPreview,
@@ -296,6 +476,7 @@ export function AdminHighlightsPage() {
           importsLast7Days,
           importsPrev7Days,
           imports7dDeltaPercent,
+          tenantGrowthPoints,
         });
       } catch (caughtError) {
         if (!isMounted) {
@@ -427,6 +608,30 @@ export function AdminHighlightsPage() {
         ],
       },
     ];
+  }, [snapshot]);
+
+  const stockGrowthChartPoints = useMemo<GrowthChartPoint[]>(() => {
+    if (!snapshot) {
+      return [];
+    }
+
+    return snapshot.tenantGrowthPoints.map((point) => ({
+      stepLabel: point.shortLabel,
+      value: point.cumulativeStock,
+      detail: `${point.label}: +${point.stockCount.toLocaleString("ru-RU")} позиций`,
+    }));
+  }, [snapshot]);
+
+  const lessorGrowthChartPoints = useMemo<GrowthChartPoint[]>(() => {
+    if (!snapshot) {
+      return [];
+    }
+
+    return snapshot.tenantGrowthPoints.map((point) => ({
+      stepLabel: point.shortLabel,
+      value: point.cumulativeTenantCount,
+      detail: `${point.label}: этап ${point.cumulativeTenantCount}`,
+    }));
   }, [snapshot]);
 
   const summaryText = useMemo(() => {
@@ -572,6 +777,32 @@ export function AdminHighlightsPage() {
                 </div>
               </article>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="panel">
+        <h2>График роста по этапам подключения</h2>
+        {isLoading ? (
+          <p>Строим графики...</p>
+        ) : error ? (
+          <p className="error">{error}</p>
+        ) : stockGrowthChartPoints.length < 2 ? (
+          <p className="empty">Недостаточно этапов для построения графика.</p>
+        ) : (
+          <div className="highlights-charts-grid">
+            <InvestorGrowthChart
+              title="Кумулятивный рост стока"
+              subtitle="Этапы: ГПБ -> РЕСО -> АЛЬФА -> СОВКОМ (по доступным данным)"
+              points={stockGrowthChartPoints}
+              valueFormatter={(value) => value.toLocaleString("ru-RU")}
+            />
+            <InvestorGrowthChart
+              title="Кумулятивный рост лизингодателей"
+              subtitle="Рост числа активных источников в supply-цепочке"
+              points={lessorGrowthChartPoints}
+              valueFormatter={(value) => value.toLocaleString("ru-RU")}
+            />
           </div>
         )}
       </div>
