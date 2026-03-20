@@ -1065,6 +1065,36 @@ a {
   min-width: 160px;
 }
 
+.activity-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.activity-presets__button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background-color .15s ease;
+}
+
+.activity-presets__button:hover {
+  border-color: rgba(15, 76, 129, 0.45);
+}
+
+.activity-presets__button--active {
+  background: rgba(15, 76, 129, 0.12);
+  border-color: rgba(15, 76, 129, 0.45);
+  color: #0f4c81;
+}
+
 .activity-payload {
   display: inline-block;
   max-width: 520px;

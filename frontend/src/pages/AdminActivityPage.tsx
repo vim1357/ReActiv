@@ -47,6 +47,16 @@ const FILTER_FIELD_LABELS: Record<string, string> = {
   sortDir: "Сортировка: направление",
 };
 
+type TimePresetId = "today" | "yesterday" | "week" | "month" | "quarter";
+
+const TIME_PRESET_OPTIONS: Array<{ id: TimePresetId; label: string }> = [
+  { id: "today", label: "Сегодня" },
+  { id: "yesterday", label: "Вчера" },
+  { id: "week", label: "Неделя" },
+  { id: "month", label: "Месяц" },
+  { id: "quarter", label: "Квартал" },
+];
+
 interface AppliedUserFilters {
   login: string;
   userId: string;
@@ -60,6 +70,76 @@ interface AppliedGuestFilters {
   eventType: "" | ActivityEventType;
   from: string;
   to: string;
+}
+
+function toDateTimeInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+}
+
+function endOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 0, 0);
+}
+
+function startOfWeek(date: Date): Date {
+  const weekDay = date.getDay();
+  const diffFromMonday = (weekDay + 6) % 7;
+  return startOfDay(new Date(date.getFullYear(), date.getMonth(), date.getDate() - diffFromMonday));
+}
+
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
+}
+
+function startOfQuarter(date: Date): Date {
+  const quarterStartMonth = Math.floor(date.getMonth() / 3) * 3;
+  return new Date(date.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0);
+}
+
+function resolveTimePresetRange(presetId: TimePresetId): { from: string; to: string } {
+  const now = new Date();
+
+  if (presetId === "today") {
+    return {
+      from: toDateTimeInputValue(startOfDay(now)),
+      to: toDateTimeInputValue(now),
+    };
+  }
+
+  if (presetId === "yesterday") {
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    return {
+      from: toDateTimeInputValue(startOfDay(yesterday)),
+      to: toDateTimeInputValue(endOfDay(yesterday)),
+    };
+  }
+
+  if (presetId === "week") {
+    return {
+      from: toDateTimeInputValue(startOfWeek(now)),
+      to: toDateTimeInputValue(now),
+    };
+  }
+
+  if (presetId === "month") {
+    return {
+      from: toDateTimeInputValue(startOfMonth(now)),
+      to: toDateTimeInputValue(now),
+    };
+  }
+
+  return {
+    from: toDateTimeInputValue(startOfQuarter(now)),
+    to: toDateTimeInputValue(now),
+  };
 }
 
 function eventTypeLabel(eventType: ActivityEventType): string {
@@ -142,6 +222,7 @@ export function AdminActivityPage() {
   const [eventTypeInput, setEventTypeInput] = useState<"" | ActivityEventType>("");
   const [fromInput, setFromInput] = useState("");
   const [toInput, setToInput] = useState("");
+  const [selectedUserTimePreset, setSelectedUserTimePreset] = useState<TimePresetId | null>(null);
 
   const [appliedFilters, setAppliedFilters] = useState<AppliedUserFilters>({
     login: "",
@@ -162,6 +243,7 @@ export function AdminActivityPage() {
   const [guestEventTypeInput, setGuestEventTypeInput] = useState<"" | ActivityEventType>("");
   const [guestFromInput, setGuestFromInput] = useState("");
   const [guestToInput, setGuestToInput] = useState("");
+  const [selectedGuestTimePreset, setSelectedGuestTimePreset] = useState<TimePresetId | null>(null);
 
   const [appliedGuestFilters, setAppliedGuestFilters] = useState<AppliedGuestFilters>({
     sessionId: "",
@@ -350,6 +432,7 @@ export function AdminActivityPage() {
     setEventTypeInput("");
     setFromInput("");
     setToInput("");
+    setSelectedUserTimePreset(null);
     setPage(1);
     setAppliedFilters({
       login: "",
@@ -357,6 +440,21 @@ export function AdminActivityPage() {
       eventType: "",
       from: "",
       to: "",
+    });
+  }
+
+  function applyUserTimePreset(presetId: TimePresetId): void {
+    const { from, to } = resolveTimePresetRange(presetId);
+    setSelectedUserTimePreset(presetId);
+    setFromInput(from);
+    setToInput(to);
+    setPage(1);
+    setAppliedFilters({
+      login: loginInput.trim(),
+      userId: userIdInput.trim(),
+      eventType: eventTypeInput,
+      from,
+      to,
     });
   }
 
@@ -375,6 +473,7 @@ export function AdminActivityPage() {
     setGuestEventTypeInput("");
     setGuestFromInput("");
     setGuestToInput("");
+    setSelectedGuestTimePreset(null);
     setGuestPage(1);
     setAppliedGuestFilters({
       sessionId: "",
@@ -384,12 +483,40 @@ export function AdminActivityPage() {
     });
   }
 
+  function applyGuestTimePreset(presetId: TimePresetId): void {
+    const { from, to } = resolveTimePresetRange(presetId);
+    setSelectedGuestTimePreset(presetId);
+    setGuestFromInput(from);
+    setGuestToInput(to);
+    setGuestPage(1);
+    setAppliedGuestFilters({
+      sessionId: guestSessionInput.trim(),
+      eventType: guestEventTypeInput,
+      from,
+      to,
+    });
+  }
+
   return (
     <section>
       <h1>Активность пользователей и гостей</h1>
 
       <div className="panel">
         <h2>Активность авторизованных пользователей</h2>
+        <div className="activity-presets" role="group" aria-label="User date presets">
+          {TIME_PRESET_OPTIONS.map((preset) => (
+            <button
+              key={`user-preset-${preset.id}`}
+              type="button"
+              className={`activity-presets__button${
+                selectedUserTimePreset === preset.id ? " activity-presets__button--active" : ""
+              }`}
+              onClick={() => applyUserTimePreset(preset.id)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
         <div className="toolbar activity-toolbar">
           <input
             type="text"
@@ -417,12 +544,18 @@ export function AdminActivityPage() {
           <input
             type="datetime-local"
             value={fromInput}
-            onChange={(event) => setFromInput(event.target.value)}
+            onChange={(event) => {
+              setFromInput(event.target.value);
+              setSelectedUserTimePreset(null);
+            }}
           />
           <input
             type="datetime-local"
             value={toInput}
-            onChange={(event) => setToInput(event.target.value)}
+            onChange={(event) => {
+              setToInput(event.target.value);
+              setSelectedUserTimePreset(null);
+            }}
           />
           <button type="button" onClick={applyFilters}>
             Применить
@@ -556,6 +689,20 @@ export function AdminActivityPage() {
 
       <div className="panel">
         <h2>Гостевая активность</h2>
+        <div className="activity-presets" role="group" aria-label="Guest date presets">
+          {TIME_PRESET_OPTIONS.map((preset) => (
+            <button
+              key={`guest-preset-${preset.id}`}
+              type="button"
+              className={`activity-presets__button${
+                selectedGuestTimePreset === preset.id ? " activity-presets__button--active" : ""
+              }`}
+              onClick={() => applyGuestTimePreset(preset.id)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
         <div className="toolbar activity-toolbar">
           <input
             type="text"
@@ -576,12 +723,18 @@ export function AdminActivityPage() {
           <input
             type="datetime-local"
             value={guestFromInput}
-            onChange={(event) => setGuestFromInput(event.target.value)}
+            onChange={(event) => {
+              setGuestFromInput(event.target.value);
+              setSelectedGuestTimePreset(null);
+            }}
           />
           <input
             type="datetime-local"
             value={guestToInput}
-            onChange={(event) => setGuestToInput(event.target.value)}
+            onChange={(event) => {
+              setGuestToInput(event.target.value);
+              setSelectedGuestTimePreset(null);
+            }}
           />
           <button type="button" onClick={applyGuestFilters}>
             Применить
