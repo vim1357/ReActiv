@@ -2,6 +2,7 @@ import { db } from "../db/connection";
 import type { CatalogQuery } from "../catalog/catalog-query";
 import {
   buildStoredPreviewSourceUrl,
+  storedMediaFileExists,
 } from "../services/local-media-storage";
 import {
   getLatestSuccessfulImportBatch,
@@ -170,6 +171,15 @@ function toCatalogListItem(item: CatalogItem): CatalogListItem {
       ? buildStoredPreviewSourceUrl(item.cardPreviewPath)
       : null,
   };
+}
+
+function hasValidStoredPreviewPath(pathValue: string): boolean {
+  const trimmed = pathValue.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return storedMediaFileExists(trimmed);
 }
 
 function computeDeterministicHash(input: string): number {
@@ -926,7 +936,9 @@ export function searchCatalogItems(filters: CatalogQuery): {
       filters.page,
       filters.pageSize,
     );
-    const rows = listRowsByIdsPreservingOrder(pageIds);
+    const rows = listRowsByIdsPreservingOrder(pageIds).filter((row) =>
+      hasValidStoredPreviewPath(row.card_preview_path),
+    );
 
     const totalRow = db
       .prepare(`SELECT COUNT(*) as total FROM vehicle_offers ${whereClause}`)
