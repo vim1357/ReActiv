@@ -173,6 +173,8 @@ export function AdminActivityPage() {
   const [guestSummary, setGuestSummary] = useState<GuestActivitySummaryResponse | null>(null);
   const [isGuestSummaryLoading, setIsGuestSummaryLoading] = useState(true);
   const [guestSummaryError, setGuestSummaryError] = useState<string | null>(null);
+  const [isUserEventsExpanded, setIsUserEventsExpanded] = useState(false);
+  const [isGuestEventsExpanded, setIsGuestEventsExpanded] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const canGoPrev = page > 1;
@@ -181,6 +183,8 @@ export function AdminActivityPage() {
   const guestTotalPages = Math.max(1, Math.ceil(guestTotal / guestPageSize));
   const canGoGuestPrev = guestPage > 1;
   const canGoGuestNext = guestPage < guestTotalPages;
+  const latestUserEventTime = items[0]?.createdAt ?? null;
+  const latestGuestEventTime = guestItems[0]?.createdAt ?? null;
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -434,6 +438,27 @@ export function AdminActivityPage() {
 
       {error && <p className="error">{error}</p>}
 
+      <div className="panel activity-collapsible">
+        <div className="activity-collapsible__header">
+          <div className="activity-collapsible__body">
+            <h3 className="activity-collapsible__title">Последние события пользователей</h3>
+            <p className="activity-collapsible__meta">
+              Всего событий: {total.toLocaleString("ru-RU")}
+              {latestUserEventTime ? ` · Последнее: ${latestUserEventTime}` : ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="secondary-button activity-collapsible__toggle"
+            onClick={() => setIsUserEventsExpanded((current) => !current)}
+            aria-expanded={isUserEventsExpanded}
+          >
+            {isUserEventsExpanded ? "Свернуть" : "Развернуть"}
+          </button>
+        </div>
+      </div>
+
+      {isUserEventsExpanded && (
       <div className="panel">
         {isLoading ? (
           <p>Загрузка активности...</p>
@@ -527,6 +552,7 @@ export function AdminActivityPage() {
           </>
         )}
       </div>
+      )}
 
       <div className="panel">
         <h2>Гостевая активность</h2>
@@ -751,6 +777,27 @@ export function AdminActivityPage() {
 
       {guestError && <p className="error">{guestError}</p>}
 
+      <div className="panel activity-collapsible">
+        <div className="activity-collapsible__header">
+          <div className="activity-collapsible__body">
+            <h3 className="activity-collapsible__title">Последние гостевые события</h3>
+            <p className="activity-collapsible__meta">
+              Всего событий: {guestTotal.toLocaleString("ru-RU")}
+              {latestGuestEventTime ? ` · Последнее: ${latestGuestEventTime}` : ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="secondary-button activity-collapsible__toggle"
+            onClick={() => setIsGuestEventsExpanded((current) => !current)}
+            aria-expanded={isGuestEventsExpanded}
+          >
+            {isGuestEventsExpanded ? "Свернуть" : "Развернуть"}
+          </button>
+        </div>
+      </div>
+
+      {isGuestEventsExpanded && (
       <div className="panel">
         {isGuestLoading ? (
           <p>Загрузка гостевой активности...</p>
@@ -850,6 +897,7 @@ export function AdminActivityPage() {
           </>
         )}
       </div>
+      )}
     </section>
   );
 }
