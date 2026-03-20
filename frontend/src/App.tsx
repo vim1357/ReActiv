@@ -10,6 +10,7 @@ import { FeedbackWidget } from "./components/FeedbackWidget";
 import { LegalLinks, PrivacyPolicyLink, TermsLink } from "./components/LegalLinks";
 import { CatalogPage } from "./pages/CatalogPage";
 import { AdminActivityPage } from "./pages/AdminActivityPage";
+import { AdminHighlightsPage } from "./pages/AdminHighlightsPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { FavoritesPage } from "./pages/FavoritesPage";
 import { LandingPage } from "./pages/LandingPage";
@@ -465,6 +466,11 @@ export function App() {
                 Пользователи
               </NavLink>
             )}
+            {isAdmin && (
+              <NavLink to="/admin/highlights" className={({ isActive }) => (isActive ? "active" : "")}>
+                Highlights
+              </NavLink>
+            )}
               {canViewActivity && (
                 <NavLink to="/admin/activity" className={({ isActive }) => (isActive ? "active" : "")}>
                   Активность
@@ -511,6 +517,10 @@ export function App() {
           <Route
             path="/admin/users"
             element={isAdmin ? <AdminUsersPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/admin/highlights"
+            element={isAdmin ? <AdminHighlightsPage /> : <Navigate to="/" replace />}
           />
           <Route
             path="/admin/activity"
