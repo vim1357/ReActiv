@@ -235,6 +235,12 @@ interface InvestorGrowthChartProps {
   valueFormatter: (value: number) => string;
 }
 
+interface InvestorSimpleLessorGrowthProps {
+  title: string;
+  subtitle: string;
+  points: GrowthChartPoint[];
+}
+
 function buildSvgPath(points: Array<{ x: number; y: number }>): string {
   if (points.length === 0) {
     return "";
@@ -351,6 +357,36 @@ function InvestorGrowthChart({
           </li>
         ))}
       </ol>
+    </article>
+  );
+}
+
+function InvestorSimpleLessorGrowth({
+  title,
+  subtitle,
+  points,
+}: InvestorSimpleLessorGrowthProps) {
+  return (
+    <article className="highlights-lessor-growth">
+      <header className="highlights-lessor-growth__header">
+        <h3>{title}</h3>
+        <p>{subtitle}</p>
+      </header>
+
+      <div className="highlights-lessor-growth__rail" aria-label={title}>
+        {points.map((point, index) => (
+          <div key={`lessor-step-${point.stepLabel}`} className="highlights-lessor-growth__step">
+            <div className="highlights-lessor-growth__dot-wrap">
+              <span className="highlights-lessor-growth__dot">{point.value}</span>
+              {index < points.length - 1 ? (
+                <span className="highlights-lessor-growth__line" aria-hidden />
+              ) : null}
+            </div>
+            <strong>{point.stepLabel}</strong>
+            <p>{point.detail}</p>
+          </div>
+        ))}
+      </div>
     </article>
   );
 }
@@ -790,18 +826,17 @@ export function AdminHighlightsPage() {
         ) : stockGrowthChartPoints.length < 2 ? (
           <p className="empty">Недостаточно этапов для построения графика.</p>
         ) : (
-          <div className="highlights-charts-grid">
+          <div className="highlights-charts-stack">
             <InvestorGrowthChart
               title="Кумулятивный рост стока"
               subtitle="Этапы: ГПБ -> РЕСО -> АЛЬФА -> СОВКОМ (по доступным данным)"
               points={stockGrowthChartPoints}
               valueFormatter={(value) => value.toLocaleString("ru-RU")}
             />
-            <InvestorGrowthChart
+            <InvestorSimpleLessorGrowth
               title="Кумулятивный рост лизингодателей"
               subtitle="Рост числа активных источников в supply-цепочке"
               points={lessorGrowthChartPoints}
-              valueFormatter={(value) => value.toLocaleString("ru-RU")}
             />
           </div>
         )}
