@@ -548,9 +548,8 @@ export function AdminHighlightsPage() {
 
     return [
       `Supply: ${snapshot.totalOffers.toLocaleString("ru-RU")} позиций от ${snapshot.tenantCount} лизингодателей.`,
-      `New arrivals: +${snapshot.newThisWeekCount.toLocaleString("ru-RU")} за неделю (${formatSignedPercent(snapshot.newThisWeekDeltaPercent)} к прошлому циклу).`,
+      `New arrivals: +${snapshot.newThisWeekCount.toLocaleString("ru-RU")} за неделю.`,
       `Coverage: ${snapshot.photoCoveragePercent.toFixed(1)}% карточек с превью (${snapshot.offersWithPreview.toLocaleString("ru-RU")} из ${snapshot.totalOffers.toLocaleString("ru-RU")}).`,
-      `Operations: ${snapshot.importsLast7Days} импортов за 7 дней (${formatSignedPercent(snapshot.imports7dDeltaPercent)} vs предыдущие 7 дней).`,
     ];
   }, [snapshot]);
 
@@ -735,7 +734,7 @@ export function AdminHighlightsPage() {
 
         <div className="highlights-hero__grid">
           <div className="highlights-hero__main">
-            <h2>Weekly snapshot для инвесторов и стейкхолдеров</h2>
+            <h2>Weekly snapshot</h2>
             <p className="highlights-hero__subtitle">{productStatus.description}</p>
 
             {isLoading ? (
@@ -763,12 +762,12 @@ export function AdminHighlightsPage() {
               <p>карточек с превью</p>
             </article>
             <article className="highlights-snapshot-card">
-              <span>Cadence</span>
-              <strong>{snapshot ? snapshot.importsLast7Days.toLocaleString("ru-RU") : "-"}</strong>
-              <p>импортов за 7 дней</p>
+              <span>Lessors</span>
+              <strong>{snapshot ? snapshot.tenantCount.toLocaleString("ru-RU") : "-"}</strong>
+              <p>активных лизингодателей</p>
             </article>
             <button type="button" className="secondary-button highlights-copy-button" onClick={() => void handleCopySummary()}>
-              {copyStatus === "success" ? "Скопировано" : copyStatus === "error" ? "Ошибка копирования" : "Скопировать investor summary"}
+              {copyStatus === "success" ? "Скопировано" : copyStatus === "error" ? "Ошибка копирования" : "Скопировать summary"}
             </button>
           </aside>
         </div>
