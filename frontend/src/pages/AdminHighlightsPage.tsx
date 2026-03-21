@@ -175,6 +175,15 @@ function formatSignedPercent(value: number | null): string {
   return `${sign}${rounded.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}%`;
 }
 
+function formatCompactK(value: number): string {
+  if (value >= 1000) {
+    const compactValue = Math.round((value / 1000) * 10) / 10;
+    return `${compactValue.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}k`;
+  }
+
+  return value.toLocaleString("ru-RU");
+}
+
 function getDeltaPercent(current: number, previous: number | null): number | null {
   if (previous === null || previous <= 0) {
     return null;
@@ -232,7 +241,6 @@ interface InvestorGrowthChartProps {
   title: string;
   subtitle: string;
   points: GrowthChartPoint[];
-  valueFormatter: (value: number) => string;
 }
 
 interface InvestorSimpleLessorGrowthProps {
@@ -255,18 +263,17 @@ function InvestorGrowthChart({
   title,
   subtitle,
   points,
-  valueFormatter,
 }: InvestorGrowthChartProps) {
   const width = 660;
-  const height = 250;
+  const height = 270;
   const left = 44;
   const right = 14;
-  const top = 18;
-  const bottom = 56;
+  const top = 24;
+  const bottom = 74;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
   const maxValue = Math.max(1, ...points.map((item) => item.value));
-  const yTickCount = 4;
+  const yTickRatios = [0.25, 0.5, 0.75, 1];
 
   const chartPoints = points.map((item, index) => {
     const ratioX = points.length > 1 ? index / (points.length - 1) : 0;
@@ -276,10 +283,6 @@ function InvestorGrowthChart({
   });
 
   const linePath = buildSvgPath(chartPoints);
-  const areaPath =
-    chartPoints.length > 0
-      ? `${linePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(2)} ${(top + plotHeight).toFixed(2)} L ${chartPoints[0].x.toFixed(2)} ${(top + plotHeight).toFixed(2)} Z`
-      : "";
 
   return (
     <article className="highlights-chart-card">
@@ -290,12 +293,11 @@ function InvestorGrowthChart({
 
       <div className="highlights-chart-card__svg-wrap">
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
-          {[...Array(yTickCount + 1).keys()].map((step) => {
-            const ratio = step / yTickCount;
+          {yTickRatios.map((ratio) => {
             const y = top + plotHeight - ratio * plotHeight;
             const value = Math.round(maxValue * ratio);
             return (
-              <g key={`y-grid-${step}`}>
+              <g key={`y-grid-${ratio}`}>
                 <line
                   x1={left}
                   y1={y}
@@ -309,54 +311,72 @@ function InvestorGrowthChart({
                   textAnchor="end"
                   className="highlights-chart-card__axis-label"
                 >
-                  {valueFormatter(value)}
+                  {formatCompactK(value)}
                 </text>
               </g>
             );
           })}
 
-          {areaPath ? (
-            <path d={areaPath} className="highlights-chart-card__area" />
-          ) : null}
           {linePath ? (
             <path d={linePath} className="highlights-chart-card__line" />
           ) : null}
 
-          {chartPoints.map((point) => (
-            <g key={`point-${point.stepLabel}`}>
-              <circle cx={point.x} cy={point.y} r={5} className="highlights-chart-card__point" />
+          {chartPoints.map((point, index) => {
+            const isLast = index === chartPoints.length - 1;
+            return (
+            <g
+              key={`point-${point.stepLabel}`}
+              className={`highlights-chart-card__point-group${isLast ? " is-last" : ""}`}
+            >
+              <title>{point.detail}</title>
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={isLast ? 8 : 6}
+                className="highlights-chart-card__point"
+              />
               <text
                 x={point.x}
-                y={point.y - 10}
+                y={point.y - 14}
                 textAnchor="middle"
                 className="highlights-chart-card__value-label"
               >
-                {valueFormatter(point.value)}
+                {formatCompactK(point.value)}
               </text>
               <text
                 x={point.x}
-                y={height - 20}
+                y={height - 30}
                 textAnchor="middle"
                 className="highlights-chart-card__x-label"
               >
                 {point.stepLabel}
               </text>
+              <text
+                x={point.x}
+                y={height - 12}
+                textAnchor="middle"
+                className="highlights-chart-card__x-stage"
+              >
+                этап {index + 1}
+              </text>
             </g>
-          ))}
+          );
+          })}
         </svg>
       </div>
 
-      <ol className="highlights-chart-card__steps">
+      <div className="highlights-chart-card__legend" aria-label="Этапы роста">
         {points.map((point, index) => (
-          <li key={`step-${point.stepLabel}`}>
-            <span>{index + 1}</span>
-            <p>
-              <strong>{point.stepLabel}</strong>
-              <em>{point.detail}</em>
-            </p>
-          </li>
+          <span
+            key={`legend-${point.stepLabel}`}
+            className="highlights-chart-card__legend-item"
+            title={point.detail}
+          >
+            <b>{index + 1}</b>
+            <em>{point.stepLabel}</em>
+          </span>
         ))}
-      </ol>
+      </div>
     </article>
   );
 }
@@ -830,7 +850,6 @@ export function AdminHighlightsPage() {
               title="Кумулятивный рост стока"
               subtitle="Этапы: ГПБ -> РЕСО -> АЛЬФА -> СОВКОМ (по доступным данным)"
               points={stockGrowthChartPoints}
-              valueFormatter={(value) => value.toLocaleString("ru-RU")}
             />
             <InvestorSimpleLessorGrowth
               title="Кумулятивный рост лизингодателей"
