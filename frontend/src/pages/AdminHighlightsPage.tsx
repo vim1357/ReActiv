@@ -47,7 +47,6 @@ interface HighlightMetric {
   value: string;
   help: string;
   caption?: string;
-  accent?: "primary" | "success";
 }
 
 interface HighlightMetricGroup {
@@ -166,7 +165,12 @@ function formatCurrencyRub(value: number | null): string {
   if (value === null || !Number.isFinite(value)) {
     return "—";
   }
-  return `${Math.round(value).toLocaleString("ru-RU")} ₽`;
+  const billions = value / 1_000_000_000;
+  const formatted = billions.toLocaleString("ru-RU", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return `${formatted} млрд ₽`;
 }
 
 function getNiceStep(rawStep: number): number {
@@ -673,7 +677,6 @@ export function AdminHighlightsPage() {
             label: "Новые за неделю",
             value: `+${snapshot.newThisWeekCount.toLocaleString("ru-RU")}`,
             help: "Добавлено за последние 7 дней.",
-            accent: "primary",
           },
           {
             label: "Объем стока, ₽",
@@ -695,7 +698,6 @@ export function AdminHighlightsPage() {
             label: "Карточки с превью",
             value: snapshot.offersWithPreview.toLocaleString("ru-RU"),
             help: "С фото превью.",
-            accent: "success",
           },
           {
             label: "Карточки без превью",
@@ -794,7 +796,7 @@ export function AdminHighlightsPage() {
                   {group.metrics.map((metric) => (
                     <article
                       key={`${group.id}-${metric.label}`}
-                      className={`highlights-metric-card${metric.accent ? ` highlights-metric-card--${metric.accent}` : ""}`}
+                      className="highlights-metric-card"
                     >
                       <div className="highlights-metric-card__topline">
                         <span>{metric.label}</span>
