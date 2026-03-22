@@ -886,7 +886,10 @@ export function AdminHighlightsPage() {
                                 STRUCTURE_SHARE_COLORS[index % STRUCTURE_SHARE_COLORS.length],
                             }}
                           />
-                          <span className="highlights-share-legend__name">
+                          <span
+                            className="highlights-share-legend__name"
+                            title={item.vehicleType}
+                          >
                             {item.vehicleType}
                           </span>
                           <strong>{formatPercent(item.sharePercent)}</strong>
