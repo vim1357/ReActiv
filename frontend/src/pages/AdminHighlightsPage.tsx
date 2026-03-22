@@ -85,9 +85,10 @@ const WEEKLY_HIGHLIGHTS: WeeklyHighlightItem[] = [
     title: "Старт платформы",
     points: [
       "Поднят production-контур ReActiv с автодеплоем из GitHub и стабильным релизным циклом.",
+      "Собран базовый домен данных: офферы, импортные партии и история изменений по загрузкам.",
       "Собран базовый backend-контракт каталога: список, карточка лота, фильтры, пагинация.",
-      "Сформирована первичная модель данных стока и импортных партий для аудита изменений.",
       "Запущен первый импорт лизингового стока и базовая нормализация полей под витрину.",
+      "Подготовлен фундамент multi-tenant архитектуры для подключения новых лизингодателей.",
     ],
   },
   {
@@ -96,8 +97,8 @@ const WEEKLY_HIGHLIGHTS: WeeklyHighlightItem[] = [
     points: [
       "Реализован ролевой контур доступа и управление пользователями через админ-панель.",
       "Введен журнал активности: просмотры, переходы, heartbeat-события, действия в витрине.",
+      "Собран первый admin-dashboard по операционным событиям и пользовательской активности.",
       "Существенно усилен UX на мобильных сценариях каталога и административных таблиц.",
-      "Подготовлены базовые операционные метрики для контроля состояния продукта в динамике.",
     ],
   },
   {
@@ -118,6 +119,7 @@ const WEEKLY_HIGHLIGHTS: WeeklyHighlightItem[] = [
       "Добавлена нормализация типов техники и брендов между разными форматами источников.",
       "Реализован VIN-based media enrichment для RESO с пост-импортным массовым обновлением.",
       "Собран защищенный bulk media sync API с токеном и контролем размера батчей.",
+      "Введены fallback-механики и диагностика ошибок медиа-источников для ускоренного восстановления.",
     ],
   },
   {
@@ -125,7 +127,7 @@ const WEEKLY_HIGHLIGHTS: WeeklyHighlightItem[] = [
     title: "Масштабирование supply и скорости",
     points: [
       "Подключены новые источники supply: Альфа-Лизинг и Совкомбанк Лизинг.",
-      "Запущен media sync pipeline для Альфы и расширены правила классификации новых файлов.",
+      "Запущен media sync pipeline для Альфы и расширены правила классификации/soft-мэппинга новых файлов.",
       "Внедрены performance-улучшения витрины: API, фильтры, превью и загрузка карточек.",
       "Реализован функционал избранного для авторизованных пользователей (витрина + карточка).",
       "Собран Investor/Highlights-раздел с ключевыми метриками, графиками роста и weekly snapshot.",
@@ -1163,8 +1165,7 @@ export function AdminHighlightsPage() {
         <h2>Понедельные итоги</h2>
         <div className="highlights-timeline">
           {WEEKLY_HIGHLIGHTS.map((week, index) => {
-            const secondaryPoints = week.points.slice(1, 3);
-            const hiddenCount = Math.max(0, week.points.length - 3);
+            const secondaryPoints = week.points.slice(1);
 
             return (
               <article key={week.period} className="highlights-timeline__item">
@@ -1184,9 +1185,6 @@ export function AdminHighlightsPage() {
                         <li key={point}>{point}</li>
                       ))}
                     </ul>
-                  ) : null}
-                  {hiddenCount > 0 ? (
-                    <p className="highlights-timeline__more">+{hiddenCount} дополнительных достижения</p>
                   ) : null}
                 </div>
               </article>
