@@ -602,7 +602,11 @@ export function AdminHighlightsPage() {
           offersWithPreview,
           noPreviewOffers,
           photoCoveragePercent,
-          stockValueRub: null,
+          stockValueRub:
+            typeof summaryResult.stockValueRub === "number" &&
+            Number.isFinite(summaryResult.stockValueRub)
+              ? summaryResult.stockValueRub
+              : null,
           coverageToGoalPercent,
           newThisWeekCount: summaryResult.newThisWeekCount,
           previousImportNewCount,

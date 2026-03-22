@@ -6,6 +6,7 @@ import { getLatestSuccessfulImportBatch } from "../repositories/import-batch-rep
 import {
   findCatalogItemById,
   getCatalogFiltersMetadata,
+  getCatalogStockValueRub,
   searchCatalogItems,
 } from "../repositories/catalog-repository";
 
@@ -74,10 +75,12 @@ export async function registerCatalogRoutes(app: FastifyInstance): Promise<void>
   app.get("/api/catalog/summary", async (_request, reply) => {
     try {
       const latestImportBatch = getLatestSuccessfulImportBatch();
+      const stockValueRub = getCatalogStockValueRub();
       const etag = buildWeakEtag(
         "catalog-summary",
         latestImportBatch?.id ?? "none",
         latestImportBatch?.added_rows ?? 0,
+        stockValueRub,
       );
 
       if (_request.headers["if-none-match"] === etag) {
@@ -90,6 +93,7 @@ export async function registerCatalogRoutes(app: FastifyInstance): Promise<void>
       reply.header("ETag", etag);
       return reply.code(200).send({
         newThisWeekCount: latestImportBatch?.added_rows ?? 0,
+        stockValueRub,
       });
     } catch {
       return reply.code(500).send({ message: "Failed to fetch catalog summary" });

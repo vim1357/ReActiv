@@ -176,6 +176,7 @@ export interface FavoriteMutationResponse {
 
 export interface CatalogSummaryResponse {
   newThisWeekCount: number;
+  stockValueRub?: number;
 }
 
 export interface CatalogFiltersResponse {

@@ -1176,6 +1176,24 @@ export function findCatalogItemById(id: number): CatalogItem | null {
   return mapDbRow(row);
 }
 
+export function getCatalogStockValueRub(): number {
+  const row = db
+    .prepare(
+      `
+        SELECT COALESCE(SUM(price), 0) AS total
+        FROM vehicle_offers
+        WHERE price IS NOT NULL
+      `,
+    )
+    .get() as { total: number | null };
+
+  if (row.total === null || !Number.isFinite(row.total)) {
+    return 0;
+  }
+
+  return row.total;
+}
+
 export function getCatalogFiltersMetadata(): Record<string, unknown> {
   const latestImportBatchId = getLatestSuccessfulImportBatchId();
   const cached = filtersMetadataCache;
