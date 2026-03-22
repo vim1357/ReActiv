@@ -39,6 +39,7 @@ interface StructureByCategoryItem {
   vehicleType: string;
   avgPriceRub: number;
   count: number;
+  pricedCount: number;
   sharePercent: number;
 }
 
@@ -231,8 +232,10 @@ function buildStructureSnapshotFromSummary(
     }));
 
   const sharePercentByType = new Map<string, number>();
+  const totalCountByType = new Map<string, number>();
   typeShares.forEach((item) => {
     sharePercentByType.set(item.vehicleType, item.sharePercent);
+    totalCountByType.set(item.vehicleType, item.count);
   });
 
   const averageByCategory = (summary.avgPriceByVehicleType ?? [])
@@ -246,7 +249,11 @@ function buildStructureSnapshotFromSummary(
     .map((item) => ({
       vehicleType: item.vehicleType.trim(),
       avgPriceRub: item.avgPriceRub,
-      count: item.count,
+      count: totalCountByType.get(item.vehicleType.trim()) ?? item.count,
+      pricedCount:
+        typeof item.pricedCount === "number" && Number.isFinite(item.pricedCount)
+          ? item.pricedCount
+          : item.count,
       sharePercent: sharePercentByType.get(item.vehicleType.trim()) ?? 0,
     }))
     .sort((left, right) => right.avgPriceRub - left.avgPriceRub)
@@ -830,7 +837,7 @@ export function AdminHighlightsPage() {
                             <span style={{ width: `${Math.max(4, widthPercent)}%` }} />
                           </div>
                           <small>
-                            {`${item.count.toLocaleString("ru-RU")} поз. • ${formatPercent(item.sharePercent)}`}
+                            {`${item.count.toLocaleString("ru-RU")} поз. • с ценой ${item.pricedCount.toLocaleString("ru-RU")} • ${formatPercent(item.sharePercent)}`}
                           </small>
                         </li>
                       );

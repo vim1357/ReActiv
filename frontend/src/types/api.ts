@@ -183,6 +183,7 @@ export interface CatalogSummaryResponse {
     vehicleType: string;
     avgPriceRub: number;
     count: number;
+    pricedCount?: number;
   }>;
   vehicleTypeShare?: Array<{
     vehicleType: string;

@@ -125,6 +125,7 @@ export interface CatalogSummaryAvgByVehicleTypeItem {
   vehicleType: string;
   avgPriceRub: number;
   count: number;
+  pricedCount: number;
 }
 
 export interface CatalogSummaryVehicleTypeShareItem {
@@ -1257,21 +1258,38 @@ export function getCatalogStructureSummaryMetrics(): CatalogStructureSummaryMetr
   const avgByVehicleTypeRows = db
     .prepare(
       `
+        WITH typed_offers AS (
+          SELECT
+            CASE
+              WHEN TRIM(COALESCE(vehicle_type, '')) = '' THEN 'Без типа'
+              ELSE vehicle_type
+            END AS vehicleType,
+            price
+          FROM vehicle_offers
+        )
         SELECT
-          CASE
-            WHEN TRIM(COALESCE(vehicle_type, '')) = '' THEN 'Без типа'
-            ELSE vehicle_type
-          END AS vehicleType,
+          vehicleType,
           COUNT(*) AS count,
-          AVG(price) AS avgPriceRub
-        FROM vehicle_offers
-        WHERE price IS NOT NULL
-          AND price > 0
-        GROUP BY
+          SUM(
+            CASE
+              WHEN price IS NOT NULL AND price > 0 THEN 1
+              ELSE 0
+            END
+          ) AS pricedCount,
+          AVG(
+            CASE
+              WHEN price IS NOT NULL AND price > 0 THEN price
+              ELSE NULL
+            END
+          ) AS avgPriceRub
+        FROM typed_offers
+        GROUP BY vehicleType
+        HAVING AVG(
           CASE
-            WHEN TRIM(COALESCE(vehicle_type, '')) = '' THEN 'Без типа'
-            ELSE vehicle_type
+            WHEN price IS NOT NULL AND price > 0 THEN price
+            ELSE NULL
           END
+        ) IS NOT NULL
         ORDER BY avgPriceRub DESC
         LIMIT 4
       `,
@@ -1279,6 +1297,7 @@ export function getCatalogStructureSummaryMetrics(): CatalogStructureSummaryMetr
     .all() as Array<{
     vehicleType: string;
     count: number;
+    pricedCount: number;
     avgPriceRub: number | null;
   }>;
 
@@ -1328,12 +1347,20 @@ export function getCatalogStructureSummaryMetrics(): CatalogStructureSummaryMetr
         : null,
     avgPriceByVehicleType: avgByVehicleTypeRows
       .filter(
-        (item): item is { vehicleType: string; count: number; avgPriceRub: number } =>
+        (
+          item,
+        ): item is {
+          vehicleType: string;
+          count: number;
+          pricedCount: number;
+          avgPriceRub: number;
+        } =>
           item.avgPriceRub !== null && Number.isFinite(item.avgPriceRub),
       )
       .map((item) => ({
         vehicleType: item.vehicleType,
         count: item.count,
+        pricedCount: item.pricedCount,
         avgPriceRub: item.avgPriceRub,
       })),
     vehicleTypeShare: vehicleTypeShareRows.map((item) => ({
