@@ -904,10 +904,22 @@ export function AdminHighlightsPage() {
       return [];
     }
 
+    const coverageTargetCount = Math.ceil(
+      (PHOTO_COVERAGE_GOAL_PERCENT / 100) * snapshot.totalOffers,
+    );
+    const cardsToCoverageTarget = Math.max(
+      0,
+      coverageTargetCount - snapshot.offersWithPreview,
+    );
+    const immediateTargetLine =
+      cardsToCoverageTarget > 0
+        ? `Immediate target: +${cardsToCoverageTarget.toLocaleString("ru-RU")} карточек с превью для достижения ${PHOTO_COVERAGE_GOAL_PERCENT}% coverage.`
+        : `Immediate target: удерживать coverage на уровне ${PHOTO_COVERAGE_GOAL_PERCENT}%+ при росте supply.`;
+
     return [
-      `Supply: ${snapshot.totalOffers.toLocaleString("ru-RU")} позиций от ${snapshot.tenantCount} лизингодателей.`,
-      `New arrivals: +${snapshot.newThisWeekCount.toLocaleString("ru-RU")} за неделю.`,
-      `Coverage: ${snapshot.photoCoveragePercent.toFixed(1)}% карточек с превью (${snapshot.offersWithPreview.toLocaleString("ru-RU")} из ${snapshot.totalOffers.toLocaleString("ru-RU")}).`,
+      `Supply: ${snapshot.totalOffers.toLocaleString("ru-RU")} total позиций, weekly net new +${snapshot.newThisWeekCount.toLocaleString("ru-RU")}.`,
+      `Active lessors: ${snapshot.tenantCount.toLocaleString("ru-RU")}. Preview coverage: ${snapshot.photoCoveragePercent.toFixed(1)}% (${snapshot.offersWithPreview.toLocaleString("ru-RU")} из ${snapshot.totalOffers.toLocaleString("ru-RU")}).`,
+      immediateTargetLine,
     ];
   }, [snapshot]);
 
@@ -1056,10 +1068,9 @@ export function AdminHighlightsPage() {
         <div className="highlights-hero__grid">
           <div className="highlights-hero__main">
             <h2>Weekly snapshot</h2>
-            <p className="highlights-hero__subtitle">{productStatus.description}</p>
 
             {isLoading ? (
-              <p>Собираем TL;DR...</p>
+              <p>Собираем executive summary...</p>
             ) : error ? (
               <p className="error">{error}</p>
             ) : (
