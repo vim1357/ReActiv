@@ -1266,30 +1266,45 @@ export function getCatalogStructureSummaryMetrics(): CatalogStructureSummaryMetr
             END AS vehicleType,
             price
           FROM vehicle_offers
+        ),
+        totals AS (
+          SELECT COUNT(*) AS totalCount
+          FROM typed_offers
+        ),
+        grouped AS (
+          SELECT
+            typed_offers.vehicleType AS vehicleType,
+            COUNT(*) AS count,
+            SUM(
+              CASE
+                WHEN typed_offers.price IS NOT NULL AND typed_offers.price > 0 THEN 1
+                ELSE 0
+              END
+            ) AS pricedCount,
+            AVG(
+              CASE
+                WHEN typed_offers.price IS NOT NULL AND typed_offers.price > 0
+                  THEN typed_offers.price
+                ELSE NULL
+              END
+            ) AS avgPriceRub,
+            CASE
+              WHEN totals.totalCount > 0
+                THEN COUNT(*) * 100.0 / totals.totalCount
+              ELSE 0
+            END AS sharePercent
+          FROM typed_offers
+          CROSS JOIN totals
+          GROUP BY typed_offers.vehicleType
         )
         SELECT
           vehicleType,
-          COUNT(*) AS count,
-          SUM(
-            CASE
-              WHEN price IS NOT NULL AND price > 0 THEN 1
-              ELSE 0
-            END
-          ) AS pricedCount,
-          AVG(
-            CASE
-              WHEN price IS NOT NULL AND price > 0 THEN price
-              ELSE NULL
-            END
-          ) AS avgPriceRub
-        FROM typed_offers
-        GROUP BY vehicleType
-        HAVING AVG(
-          CASE
-            WHEN price IS NOT NULL AND price > 0 THEN price
-            ELSE NULL
-          END
-        ) IS NOT NULL
+          count,
+          pricedCount,
+          avgPriceRub
+        FROM grouped
+        WHERE avgPriceRub IS NOT NULL
+          AND sharePercent >= 1
         ORDER BY avgPriceRub DESC
         LIMIT 4
       `,

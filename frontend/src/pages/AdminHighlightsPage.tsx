@@ -58,7 +58,6 @@ interface HighlightsStructureSnapshot {
 
 const TENANT_GROWTH_ORDER: ImportTenantId[] = ["gpb", "reso", "alpha", "sovcombank"];
 const STRUCTURE_CATEGORY_LIMIT = 4;
-const STRUCTURE_CATEGORY_MIN_SHARE_PERCENT = 1;
 const STRUCTURE_SHARE_PRIMARY_LIMIT = 4;
 const STRUCTURE_SHARE_OTHER_LABEL = "Прочее";
 
@@ -249,7 +248,6 @@ function buildStructureSnapshotFromSummary(
           : item.count,
       sharePercent: sharePercentByType.get(item.vehicleType.trim()) ?? 0,
     }))
-    .filter((item) => item.sharePercent >= STRUCTURE_CATEGORY_MIN_SHARE_PERCENT)
     .sort((left, right) => right.avgPriceRub - left.avgPriceRub)
     .slice(0, STRUCTURE_CATEGORY_LIMIT);
 
