@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAdminMediaHealth } from "../api/client";
-import type { MediaHealthDailyItem, MediaHealthJobRunItem } from "../types/api";
+import { getAdminCardFillness, getAdminMediaHealth } from "../api/client";
+import type {
+  AdminCardFillnessResponse,
+  MediaHealthDailyItem,
+  MediaHealthJobRunItem,
+} from "../types/api";
 
 const MEDIA_HEALTH_HISTORY_DAYS = 30;
 
@@ -44,10 +48,21 @@ function formatRatio(left: number, right: number): string {
   return `${left.toLocaleString("ru-RU")} / ${right.toLocaleString("ru-RU")}`;
 }
 
+function getFillnessToneClass(percent: number): string {
+  if (percent >= 85) {
+    return "is-good";
+  }
+  if (percent >= 65) {
+    return "is-warn";
+  }
+  return "is-risk";
+}
+
 export function AdminOperationsPage() {
   const [mediaHealthHistory, setMediaHealthHistory] = useState<MediaHealthDailyItem[]>([]);
   const [mediaHealthLatestRun, setMediaHealthLatestRun] =
     useState<MediaHealthJobRunItem | null>(null);
+  const [cardFillness, setCardFillness] = useState<AdminCardFillnessResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,13 +73,18 @@ export function AdminOperationsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await getAdminMediaHealth(MEDIA_HEALTH_HISTORY_DAYS);
+        const [mediaHealthResponse, cardFillnessResponse] = await Promise.all([
+          getAdminMediaHealth(MEDIA_HEALTH_HISTORY_DAYS),
+          getAdminCardFillness(),
+        ]);
+
         if (!isMounted) {
           return;
         }
 
-        setMediaHealthHistory(response.history ?? []);
-        setMediaHealthLatestRun(response.recentRuns?.[0] ?? null);
+        setMediaHealthHistory(mediaHealthResponse.history ?? []);
+        setMediaHealthLatestRun(mediaHealthResponse.recentRuns?.[0] ?? null);
+        setCardFillness(cardFillnessResponse);
       } catch (caughtError) {
         if (!isMounted) {
           return;
@@ -172,6 +192,41 @@ export function AdminOperationsPage() {
     [],
   );
 
+  const worstFillnessTenant = useMemo(() => {
+    if (!cardFillness || cardFillness.tenants.length === 0) {
+      return null;
+    }
+
+    return cardFillness.tenants.reduce((worst, candidate) => {
+      if (!worst || candidate.overallFillPercent < worst.overallFillPercent) {
+        return candidate;
+      }
+      return worst;
+    }, null as AdminCardFillnessResponse["tenants"][number] | null);
+  }, [cardFillness]);
+
+  const fillnessMetricsByFieldAndTenant = useMemo(() => {
+    if (!cardFillness) {
+      return new Map<string, Map<string, AdminCardFillnessResponse["tenants"][number]["fields"][number]>>();
+    }
+
+    const result = new Map<
+      string,
+      Map<string, AdminCardFillnessResponse["tenants"][number]["fields"][number]>
+    >();
+
+    cardFillness.tenants.forEach((tenant) => {
+      tenant.fields.forEach((field) => {
+        if (!result.has(field.key)) {
+          result.set(field.key, new Map());
+        }
+        result.get(field.key)?.set(tenant.tenantId, field);
+      });
+    });
+
+    return result;
+  }, [cardFillness]);
+
   return (
     <section className="operations-page">
       <h1>Operations</h1>
@@ -179,7 +234,9 @@ export function AdminOperationsPage() {
       <div className="panel highlights-media-health">
         <div className="highlights-media-health__header">
           <h2>Актуальность медиа-данных</h2>
-          <p>Ежесуточный контроль сохранности превью и доступности внешних источников.</p>
+          <p>
+            Ежесуточный контроль сохранности превью и доступности внешних источников.
+          </p>
         </div>
 
         {isLoading ? (
@@ -187,7 +244,9 @@ export function AdminOperationsPage() {
         ) : error ? (
           <p className="error">{error}</p>
         ) : mediaHealthHistory.length === 0 ? (
-          <p className="empty">Пока нет ежедневных срезов. Первый запуск заполнит таблицу.</p>
+          <p className="empty">
+            Пока нет ежедневных срезов. Первый запуск заполнит таблицу.
+          </p>
         ) : (
           <div className="highlights-media-health__content">
             <div className="highlights-media-health__kpis">
@@ -315,10 +374,111 @@ export function AdminOperationsPage() {
       </div>
 
       <div className="panel operations-card-fillness">
-        <h2>Заполненность карточек</h2>
-        <p className="operations-card-fillness__lead">
-          Блок добавлен. Логика и расчет метрик будут подключены следующим этапом.
-        </p>
+        <div className="operations-card-fillness__header">
+          <h2>Заполненность карточек</h2>
+          <p>
+            Процент заполнения ключевых полей по каждому лизингодателю для контроля
+            качества данных.
+          </p>
+        </div>
+
+        {isLoading ? (
+          <p>Собираем метрики заполненности...</p>
+        ) : error ? (
+          <p className="error">{error}</p>
+        ) : !cardFillness || cardFillness.tenants.length === 0 ? (
+          <p className="empty">Пока нет данных для расчёта заполненности карточек.</p>
+        ) : (
+          <div className="operations-card-fillness__content">
+            <div className="operations-card-fillness__kpis">
+              <article className="operations-card-fillness-kpi">
+                <span>Лизингодатели</span>
+                <strong>{cardFillness.totals.tenantCount.toLocaleString("ru-RU")}</strong>
+                <p>в текущем срезе</p>
+              </article>
+              <article className="operations-card-fillness-kpi">
+                <span>Лоты в расчёте</span>
+                <strong>{cardFillness.totals.totalOffers.toLocaleString("ru-RU")}</strong>
+                <p>актуальные карточки каталога</p>
+              </article>
+              <article className="operations-card-fillness-kpi">
+                <span>Средняя заполненность</span>
+                <strong>{formatPercent(cardFillness.totals.overallFillPercent)}</strong>
+                <p>по всем ключевым полям</p>
+              </article>
+              <article className="operations-card-fillness-kpi">
+                <span>Зона риска</span>
+                <strong>
+                  {worstFillnessTenant
+                    ? formatPercent(worstFillnessTenant.overallFillPercent)
+                    : "—"}
+                </strong>
+                <p>
+                  {worstFillnessTenant
+                    ? `${worstFillnessTenant.tenantLabel} — минимальный уровень`
+                    : "нет данных"}
+                </p>
+              </article>
+            </div>
+
+            <div className="operations-card-fillness__table-wrap">
+              <table className="operations-card-fillness__table">
+                <thead>
+                  <tr>
+                    <th>Поле</th>
+                    {cardFillness.tenants.map((tenant) => (
+                      <th key={`fillness-tenant-${tenant.tenantId}`}>{tenant.tenantLabel}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {cardFillness.fields.map((field) => (
+                    <tr key={`fillness-field-${field.key}`}>
+                      <th>{field.label}</th>
+                      {cardFillness.tenants.map((tenant) => {
+                        const metric =
+                          fillnessMetricsByFieldAndTenant
+                            .get(field.key)
+                            ?.get(tenant.tenantId) ?? null;
+
+                        if (!metric) {
+                          return <td key={`${field.key}-${tenant.tenantId}`}>—</td>;
+                        }
+
+                        return (
+                          <td
+                            key={`${field.key}-${tenant.tenantId}`}
+                            className={getFillnessToneClass(metric.fillPercent)}
+                          >
+                            <strong>{formatPercent(metric.fillPercent)}</strong>
+                            <small>{formatRatio(metric.filledCount, tenant.totalOffers)}</small>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+
+                  <tr className="is-overall">
+                    <th>Итоговая заполненность</th>
+                    {cardFillness.tenants.map((tenant) => (
+                      <td
+                        key={`fillness-overall-${tenant.tenantId}`}
+                        className={getFillnessToneClass(tenant.overallFillPercent)}
+                      >
+                        <strong>{formatPercent(tenant.overallFillPercent)}</strong>
+                        <small>{tenant.totalOffers.toLocaleString("ru-RU")} лотов</small>
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p className="operations-card-fillness__updated">
+              Обновлено: {formatDate(cardFillness.generatedAt)}
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

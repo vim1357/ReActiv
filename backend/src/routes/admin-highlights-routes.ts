@@ -4,6 +4,7 @@ import {
   listMediaHealthDaily,
   listRecentMediaHealthJobRuns,
 } from "../repositories/media-health-repository";
+import { getCardFillnessSummary } from "../repositories/card-fillness-repository";
 import { runAndPersistMediaHealthSnapshot } from "../services/media-health-snapshot-service";
 
 const mediaHealthQuerySchema = z.object({
@@ -25,6 +26,21 @@ function rejectIfNotAdmin(
 export async function registerAdminHighlightsRoutes(
   app: FastifyInstance,
 ): Promise<void> {
+  app.get("/api/admin/highlights/card-fillness", async (request, reply) => {
+    if (rejectIfNotAdmin(request, reply)) {
+      return;
+    }
+
+    try {
+      const summary = getCardFillnessSummary();
+      return reply.code(200).send(summary);
+    } catch {
+      return reply
+        .code(500)
+        .send({ message: "Failed to fetch card fillness metrics" });
+    }
+  });
+
   app.get("/api/admin/highlights/media-health", async (request, reply) => {
     if (rejectIfNotAdmin(request, reply)) {
       return;

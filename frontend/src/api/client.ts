@@ -1,4 +1,5 @@
 import type {
+  AdminCardFillnessResponse,
   AdminMediaHealthResponse,
   AdminUsersResponse,
   ActivityEventType,
@@ -764,6 +765,30 @@ export async function getAdminMediaHealth(
     }
 
     return (await response.json()) as AdminMediaHealthResponse;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw backendUnavailableError();
+    }
+    throw error;
+  }
+}
+
+export async function getAdminCardFillness(): Promise<AdminCardFillnessResponse> {
+  try {
+    const response = await fetch(buildUrl("/admin/highlights/card-fillness"), {
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (response.status === 403) {
+      throw new Error("FORBIDDEN");
+    }
+
+    if (!response.ok) {
+      throw new Error("Не удалось загрузить заполненность карточек");
+    }
+
+    return (await response.json()) as AdminCardFillnessResponse;
   } catch (error) {
     if (error instanceof TypeError) {
       throw backendUnavailableError();

@@ -242,6 +242,44 @@ export interface AdminMediaHealthResponse {
   recentRuns: MediaHealthJobRunItem[];
 }
 
+export interface AdminCardFillnessFieldMeta {
+  key:
+    | "price"
+    | "mileageKm"
+    | "year"
+    | "brand"
+    | "model"
+    | "storageAddress"
+    | "websiteUrl"
+    | "hasPhoto";
+  label: string;
+}
+
+export interface AdminCardFillnessFieldMetric extends AdminCardFillnessFieldMeta {
+  filledCount: number;
+  missingCount: number;
+  fillPercent: number;
+}
+
+export interface AdminCardFillnessTenantItem {
+  tenantId: string;
+  tenantLabel: string;
+  totalOffers: number;
+  overallFillPercent: number;
+  fields: AdminCardFillnessFieldMetric[];
+}
+
+export interface AdminCardFillnessResponse {
+  generatedAt: string;
+  fields: AdminCardFillnessFieldMeta[];
+  tenants: AdminCardFillnessTenantItem[];
+  totals: {
+    totalOffers: number;
+    tenantCount: number;
+    overallFillPercent: number;
+  };
+}
+
 export interface CatalogFiltersResponse {
   offerCode: string[];
   tenantId: string[];
