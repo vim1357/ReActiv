@@ -26,11 +26,6 @@ const STATIC_SITEMAP_URLS: StaticSitemapUrl[] = [
     changefreq: "weekly",
     priority: 0.8,
   },
-  {
-    path: "/showcase",
-    changefreq: "daily",
-    priority: 0.9,
-  },
 ];
 
 function trimTrailingSlashes(value: string): string {
