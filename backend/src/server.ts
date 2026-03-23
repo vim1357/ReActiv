@@ -35,6 +35,9 @@ const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";
 
 const ALWAYS_PUBLIC_PATHS = new Set([
+  "/",
+  "/landing",
+  "/showcase",
   "/health",
   "/sitemap.xml",
   "/api/auth/login",
