@@ -178,7 +178,7 @@ export function AdminOperationsPage() {
 
       <div className="panel highlights-media-health">
         <div className="highlights-media-health__header">
-          <h2>Живость медиа</h2>
+          <h2>Актуальность медиа-данных</h2>
           <p>Ежесуточный контроль сохранности превью и доступности внешних источников.</p>
         </div>
 
