@@ -8,6 +8,7 @@ import { insertImportError } from "../repositories/import-error-repository";
 import {
   appendVehicleOfferSnapshots,
   backfillVehicleOfferSnapshotsIfEmpty,
+  listDistinctBrands,
   listVehicleOffersByImportBatchId,
   replaceCurrentVehicleOffers,
   type StoredVehicleOfferRow,
@@ -71,6 +72,9 @@ function mapStoredToNormalizedRow(row: StoredVehicleOfferRow): NormalizedVehicle
     offer_code: toComparableString(row.offer_code),
     status: toComparableString(row.status),
     brand: toComparableString(row.brand),
+    brand_raw: toComparableString(row.brand),
+    brand_unknown_mapped: false,
+    brand_composite_tail: null,
     model: toComparableString(row.model),
     modification: toComparableString(row.modification),
     vehicle_type: toComparableString(row.vehicle_type),
@@ -123,6 +127,7 @@ export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
   let removedRows = 0;
   let unchangedRows = 0;
   const seenOfferCodes = new Set<string>();
+  const seenSovcomBrandWarnings = new Set<string>();
 
   input.logger?.info(
     {
@@ -170,11 +175,15 @@ export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
       }
     }
 
+    const canonicalBrandHints =
+      tenantProfile.id === "sovcombank" ? listDistinctBrands("sovcombank") : undefined;
+
     parsedWorkbook.rows.forEach((row, index) => {
       const rowNumber = index + 2;
       const normalizedRow = normalizeVehicleOfferRow(row, columnMap.fieldToColumnIndex, {
         offerCodeNormalizer: tenantProfile.offerCodeNormalizer,
         tenantId: tenantProfile.id,
+        canonicalBrandHints,
       });
       const validationErrors = validateNormalizedRow(normalizedRow);
       const blockingErrors = validationErrors.filter((validationError) =>
@@ -255,6 +264,34 @@ export function importWorkbook(input: ImportServiceInput): ImportServiceResult {
             field: "vehicle_type",
             message,
           });
+        }
+      }
+
+      if (
+        tenantProfile.id === "sovcombank" &&
+        normalizedRow.brand_unknown_mapped &&
+        normalizedRow.brand_raw
+      ) {
+        const normalizedBrandWarningKey = normalizedRow.brand_raw.toLocaleLowerCase("ru-RU");
+        if (!seenSovcomBrandWarnings.has(normalizedBrandWarningKey)) {
+          seenSovcomBrandWarnings.add(normalizedBrandWarningKey);
+
+          const message = `Ambiguous brand value kept as-is: ${normalizedRow.brand_raw}`;
+          insertImportError({
+            import_batch_id: importBatchId,
+            tenant_id: tenantProfile.id,
+            row_number: rowNumber,
+            field: "brand",
+            message,
+          });
+
+          if (errors.length < MAX_RESPONSE_ERRORS) {
+            errors.push({
+              rowNumber,
+              field: "brand",
+              message,
+            });
+          }
         }
       }
 

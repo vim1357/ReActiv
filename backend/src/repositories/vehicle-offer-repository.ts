@@ -42,6 +42,35 @@ export interface VehicleOfferMediaCandidateWithWebsite extends VehicleOfferMedia
   websiteUrl: string | null;
 }
 
+export function listDistinctBrands(excludedTenantId?: string): string[] {
+  const rows = excludedTenantId
+    ? (db
+        .prepare(
+          `
+            SELECT DISTINCT brand AS value
+            FROM vehicle_offers
+            WHERE TRIM(COALESCE(brand, '')) != ''
+              AND tenant_id != ?
+            ORDER BY brand ASC
+          `,
+        )
+        .all(excludedTenantId) as Array<{ value: string }>)
+    : (db
+        .prepare(
+          `
+            SELECT DISTINCT brand AS value
+            FROM vehicle_offers
+            WHERE TRIM(COALESCE(brand, '')) != ''
+            ORDER BY brand ASC
+          `,
+        )
+        .all() as Array<{ value: string }>);
+
+  return rows
+    .map((row) => row.value?.trim())
+    .filter((value): value is string => Boolean(value));
+}
+
 function toDbText(value: string | null): string {
   return value ?? "";
 }

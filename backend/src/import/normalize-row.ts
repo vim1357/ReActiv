@@ -1,7 +1,7 @@
 import type { CanonicalField } from "../domain/types";
 import type { ColumnMapResult } from "./resolve-column-map";
 import { buildTitle } from "./build-title";
-import { normalizeBrand } from "./normalize-brand";
+import { normalizeBrandWithMeta } from "./normalize-brand";
 import { normalizeOfferCode } from "./normalize-offer-code";
 import { normalizeString } from "./normalize-string";
 import { normalizeUrl } from "./normalize-url";
@@ -15,6 +15,9 @@ export interface NormalizedVehicleOfferRow {
   offer_code: string | null;
   status: string | null;
   brand: string | null;
+  brand_raw: string | null;
+  brand_unknown_mapped: boolean;
+  brand_composite_tail: string | null;
   model: string | null;
   modification: string | null;
   vehicle_type: string | null;
@@ -55,6 +58,7 @@ function getValue(
 interface NormalizeVehicleOfferRowOptions {
   offerCodeNormalizer?: (rawValue: unknown) => string | null;
   tenantId?: string;
+  canonicalBrandHints?: string[];
 }
 
 export function normalizeVehicleOfferRow(
@@ -65,7 +69,11 @@ export function normalizeVehicleOfferRow(
   const offerCodeNormalizer = options.offerCodeNormalizer ?? normalizeOfferCode;
   const offerCode = offerCodeNormalizer(getValue(row, fieldToColumnIndex, "offer_code"));
   const status = normalizeString(getValue(row, fieldToColumnIndex, "status")) || null;
-  const brand = normalizeBrand(getValue(row, fieldToColumnIndex, "brand"));
+  const brandMeta = normalizeBrandWithMeta(getValue(row, fieldToColumnIndex, "brand"), {
+    tenantId: options.tenantId,
+    canonicalBrandHints: options.canonicalBrandHints,
+  });
+  const brand = brandMeta.value;
   const model = normalizeString(getValue(row, fieldToColumnIndex, "model")) || null;
   const modification =
     normalizeString(getValue(row, fieldToColumnIndex, "modification")) || null;
@@ -91,6 +99,9 @@ export function normalizeVehicleOfferRow(
     offer_code: offerCode,
     status,
     brand,
+    brand_raw: brandMeta.rawNormalized,
+    brand_unknown_mapped: brandMeta.unknownMapped,
+    brand_composite_tail: brandMeta.compositeTail,
     model,
     modification,
     vehicle_type: vehicleTypeMeta.normalized,
