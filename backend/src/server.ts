@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import { initializeSchema } from "./db/schema";
 import { registerAdminUserRoutes } from "./routes/admin-user-routes";
 import { registerAdminAlphaMediaRoutes } from "./routes/admin-alpha-media-routes";
+import { registerAdminHighlightsRoutes } from "./routes/admin-highlights-routes";
 import { registerAdminResoMediaRoutes } from "./routes/admin-reso-media-routes";
 import { registerActivityRoutes } from "./routes/activity-routes";
 import { registerAuthRoutes } from "./routes/auth-routes";
@@ -17,6 +18,7 @@ import { registerFavoriteRoutes } from "./routes/favorite-routes";
 import { getPlatformMode } from "./repositories/platform-settings-repository";
 import { authenticateRequest } from "./services/auth-service";
 import { ensureBootstrapAdmin } from "./startup/bootstrap-admin";
+import { startMediaHealthScheduler } from "./services/media-health-scheduler";
 
 const app = Fastify({
   logger: true,
@@ -108,12 +110,14 @@ async function startServer(): Promise<void> {
   await registerMediaRoutes(app);
   await registerShareRoutes(app);
   await registerAdminUserRoutes(app);
+  await registerAdminHighlightsRoutes(app);
   await registerAdminResoMediaRoutes(app);
   await registerAdminAlphaMediaRoutes(app);
   await registerActivityRoutes(app);
 
   try {
     await app.listen({ port, host });
+    startMediaHealthScheduler(app.log);
     app.log.info({ port, host }, "Server started");
   } catch (error) {
     app.log.error(error, "Failed to start server");

@@ -1,4 +1,5 @@
 import type {
+  AdminMediaHealthResponse,
   AdminUsersResponse,
   ActivityEventType,
   ActivityEventsResponse,
@@ -733,6 +734,36 @@ export async function getCatalogSummary(): Promise<CatalogSummaryResponse> {
     }
 
     return (await response.json()) as CatalogSummaryResponse;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw backendUnavailableError();
+    }
+    throw error;
+  }
+}
+
+export async function getAdminMediaHealth(
+  days = 30,
+): Promise<AdminMediaHealthResponse> {
+  const params = new URLSearchParams({ days: String(days) });
+  try {
+    const response = await fetch(
+      buildUrl(`/admin/highlights/media-health?${params.toString()}`),
+      {
+        credentials: "include",
+        cache: "no-store",
+      },
+    );
+
+    if (response.status === 403) {
+      throw new Error("FORBIDDEN");
+    }
+
+    if (!response.ok) {
+      throw new Error("Не удалось загрузить метрики живости медиа");
+    }
+
+    return (await response.json()) as AdminMediaHealthResponse;
   } catch (error) {
     if (error instanceof TypeError) {
       throw backendUnavailableError();

@@ -252,12 +252,29 @@ function ensureVehicleOffersNullableColumns(): void {
 
   db.exec(`PRAGMA foreign_keys = OFF`);
   try {
+    const existingColumnNames = new Set(columns.map((column) => column.name));
+    const selectColumns = VEHICLE_OFFER_COLUMNS.map((columnName) => {
+      if (existingColumnNames.has(columnName)) {
+        return columnName;
+      }
+
+      if (columnName === "card_preview_path") {
+        return "'' AS card_preview_path";
+      }
+
+      if (columnName === "has_photo") {
+        return "0 AS has_photo";
+      }
+
+      return `NULL AS ${columnName}`;
+    });
+
     const migrate = db.transaction(() => {
       db.exec(createVehicleOffersTableSql("vehicle_offers_new"));
       db.prepare(
         `
           INSERT INTO vehicle_offers_new (${VEHICLE_OFFER_COLUMNS.join(", ")})
-          SELECT ${VEHICLE_OFFER_COLUMNS.join(", ")}
+          SELECT ${selectColumns.join(", ")}
           FROM vehicle_offers
         `,
       ).run();
@@ -371,6 +388,39 @@ export function initializeSchema(): void {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS media_health_daily (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      metric_date TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'success',
+      preview_candidates_count INTEGER NOT NULL DEFAULT 0,
+      preview_alive_count INTEGER NOT NULL DEFAULT 0,
+      preview_missing_count INTEGER NOT NULL DEFAULT 0,
+      preview_error_count INTEGER NOT NULL DEFAULT 0,
+      preview_alive_percent REAL NOT NULL DEFAULT 0,
+      external_sample_requested INTEGER NOT NULL DEFAULT 0,
+      external_checked_with_source_count INTEGER NOT NULL DEFAULT 0,
+      external_no_source_count INTEGER NOT NULL DEFAULT 0,
+      external_alive_count INTEGER NOT NULL DEFAULT 0,
+      external_no_preview_count INTEGER NOT NULL DEFAULT 0,
+      external_error_count INTEGER NOT NULL DEFAULT 0,
+      external_alive_percent REAL NOT NULL DEFAULT 0,
+      host_stats_json TEXT NOT NULL DEFAULT '{}',
+      error_message TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS media_health_job_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      metric_date TEXT NOT NULL,
+      trigger_type TEXT NOT NULL,
+      status TEXT NOT NULL,
+      error_message TEXT,
+      details_json TEXT,
+      started_at TEXT NOT NULL,
+      finished_at TEXT
+    );
+
     INSERT OR IGNORE INTO platform_settings (key, value)
     VALUES ('platform_mode', 'closed');
 
@@ -386,6 +436,9 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_guest_activity_event_type_created_at ON guest_activity_events(event_type, created_at);
     CREATE INDEX IF NOT EXISTS idx_guest_activity_session_id_created_at ON guest_activity_events(session_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_guest_activity_created_at ON guest_activity_events(created_at);
+    CREATE INDEX IF NOT EXISTS idx_media_health_daily_metric_date ON media_health_daily(metric_date);
+    CREATE INDEX IF NOT EXISTS idx_media_health_job_runs_started_at ON media_health_job_runs(started_at);
+    CREATE INDEX IF NOT EXISTS idx_media_health_job_runs_metric_date ON media_health_job_runs(metric_date);
   `);
 
   db.exec(createVehicleOffersTableSql("vehicle_offers"));

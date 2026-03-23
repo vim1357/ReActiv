@@ -192,6 +192,56 @@ export interface CatalogSummaryResponse {
   }>;
 }
 
+export type MediaHealthDailyStatus = "success" | "failed";
+export type MediaHealthRunStatus = "running" | "success" | "failed";
+
+export interface MediaHealthHostStat {
+  host: string;
+  total: number;
+  alive: number;
+  noPreview: number;
+  errors: number;
+  alivePercent: number;
+}
+
+export interface MediaHealthDailyItem {
+  metricDate: string;
+  status: MediaHealthDailyStatus;
+  previewCandidatesCount: number;
+  previewAliveCount: number;
+  previewMissingCount: number;
+  previewErrorCount: number;
+  previewAlivePercent: number;
+  externalSampleRequested: number;
+  externalCheckedWithSourceCount: number;
+  externalNoSourceCount: number;
+  externalAliveCount: number;
+  externalNoPreviewCount: number;
+  externalErrorCount: number;
+  externalAlivePercent: number;
+  hostStats: MediaHealthHostStat[];
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MediaHealthJobRunItem {
+  id: number;
+  metricDate: string;
+  triggerType: string;
+  status: MediaHealthRunStatus;
+  errorMessage: string | null;
+  detailsJson: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+export interface AdminMediaHealthResponse {
+  history: MediaHealthDailyItem[];
+  latest: MediaHealthDailyItem | null;
+  recentRuns: MediaHealthJobRunItem[];
+}
+
 export interface CatalogFiltersResponse {
   offerCode: string[];
   tenantId: string[];
