@@ -11,6 +11,7 @@ import { LegalLinks, PrivacyPolicyLink, TermsLink } from "./components/LegalLink
 import { CatalogPage } from "./pages/CatalogPage";
 import { AdminActivityPage } from "./pages/AdminActivityPage";
 import { AdminHighlightsPage } from "./pages/AdminHighlightsPage";
+import { AdminOperationsPage } from "./pages/AdminOperationsPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { FavoritesPage } from "./pages/FavoritesPage";
 import { LandingPage } from "./pages/LandingPage";
@@ -471,6 +472,11 @@ export function App() {
                 Highlights
               </NavLink>
             )}
+            {isAdmin && (
+              <NavLink to="/admin/operations" className={({ isActive }) => (isActive ? "active" : "")}>
+                Operations
+              </NavLink>
+            )}
               {canViewActivity && (
                 <NavLink to="/admin/activity" className={({ isActive }) => (isActive ? "active" : "")}>
                   Активность
@@ -521,6 +527,10 @@ export function App() {
           <Route
             path="/admin/highlights"
             element={isAdmin ? <AdminHighlightsPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/admin/operations"
+            element={isAdmin ? <AdminOperationsPage /> : <Navigate to="/" replace />}
           />
           <Route
             path="/admin/activity"

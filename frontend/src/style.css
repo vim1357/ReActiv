@@ -1230,6 +1230,11 @@ a {
   gap: 12px;
 }
 
+.operations-page {
+  display: grid;
+  gap: 12px;
+}
+
 .highlights-hero {
   background:
     radial-gradient(circle at 100% 0%, rgba(44, 126, 214, 0.14), transparent 38%),
@@ -1501,6 +1506,20 @@ a {
 .highlights-media-health__hosts small {
   color: #6f819c;
   font-size: 12px;
+}
+
+.operations-card-fillness {
+  display: grid;
+  gap: 8px;
+}
+
+.operations-card-fillness h2 {
+  margin: 0;
+}
+
+.operations-card-fillness__lead {
+  margin: 0;
+  color: #34475f;
 }
 
 .highlights-structure {
