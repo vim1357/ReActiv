@@ -463,6 +463,53 @@ function normalizeComparableText(value: string): string {
     .toLocaleLowerCase("ru-RU");
 }
 
+function normalizeComparableTextForAlias(value: string): string {
+  return normalizeComparableText(value)
+    .replace(/[^a-zа-яё0-9]+/giu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function getBrandNormalizationBucket(rawValue: string): {
+  key: string;
+  forcedLabel: string | null;
+} {
+  const cleaned = cleanDisplayValue(rawValue);
+  const normalized = normalizeComparableTextForAlias(cleaned);
+  if (!normalized) {
+    return {
+      key: "",
+      forcedLabel: null,
+    };
+  }
+
+  if (normalized.startsWith("отсутствует")) {
+    return {
+      key: "__brand_absent__",
+      forcedLabel: "Отсутствует",
+    };
+  }
+
+  if (normalized.startsWith("umg")) {
+    return {
+      key: "__brand_umg__",
+      forcedLabel: "Umg",
+    };
+  }
+
+  if (normalized.startsWith("mercedes")) {
+    return {
+      key: "__brand_mercedes__",
+      forcedLabel: "Mercedes-Benz",
+    };
+  }
+
+  return {
+    key: normalizeComparableText(cleaned),
+    forcedLabel: null,
+  };
+}
+
 function isAllUppercaseWord(value: string): boolean {
   const lettersOnly = value.replace(/[^A-Za-zА-Яа-яЁё]/g, "");
   if (lettersOnly.length < 2) {
@@ -506,6 +553,37 @@ function buildDisplayLabelMap(values: string[]): Map<string, string> {
     }
 
     const key = normalizeComparableText(cleanedValue);
+    const existing = labelsByKey.get(key);
+    if (!existing) {
+      labelsByKey.set(key, cleanedValue);
+      return;
+    }
+
+    labelsByKey.set(key, pickPreferredDisplayLabel(existing, cleanedValue));
+  });
+
+  return labelsByKey;
+}
+
+function buildBrandDisplayLabelMap(values: string[]): Map<string, string> {
+  const labelsByKey = new Map<string, string>();
+
+  values.forEach((rawValue) => {
+    const cleanedValue = cleanDisplayValue(rawValue);
+    if (!cleanedValue) {
+      return;
+    }
+
+    const { key, forcedLabel } = getBrandNormalizationBucket(cleanedValue);
+    if (!key) {
+      return;
+    }
+
+    if (forcedLabel) {
+      labelsByKey.set(key, forcedLabel);
+      return;
+    }
+
     const existing = labelsByKey.get(key);
     if (!existing) {
       labelsByKey.set(key, cleanedValue);
@@ -565,7 +643,10 @@ function buildNormalizedValuesMapForColumn(column: "brand" | "model"): Map<strin
 
   rows.forEach((row) => {
     const rawValue = row.value;
-    const normalized = normalizeComparableText(rawValue);
+    const normalized =
+      column === "brand"
+        ? getBrandNormalizationBucket(rawValue).key
+        : normalizeComparableText(rawValue);
     if (!normalized) {
       return;
     }
@@ -625,7 +706,15 @@ function addUnicodeSafeTextInFilter(
   }
 
   const normalizedValues = Array.from(
-    new Set(values.map((value) => normalizeComparableText(value)).filter(Boolean)),
+    new Set(
+      values
+        .map((value) =>
+          column === "brand"
+            ? getBrandNormalizationBucket(value).key
+            : normalizeComparableText(value),
+        )
+        .filter(Boolean),
+    ),
   );
   if (normalizedValues.length === 0) {
     return;
@@ -1434,7 +1523,7 @@ export function getCatalogFiltersMetadata(): Record<string, unknown> {
     )
     .get() as Record<string, number | null>;
 
-  const brandDisplayMap = buildDisplayLabelMap(distinct("brand"));
+  const brandDisplayMap = buildBrandDisplayLabelMap(distinct("brand"));
   const modelDisplayMap = buildDisplayLabelMap(distinct("model"));
 
   const mergeDisplayValue = (
@@ -1470,7 +1559,7 @@ export function getCatalogFiltersMetadata(): Record<string, unknown> {
 
   const modelsByBrandMap = new Map<string, Map<string, string>>();
   modelsByBrandRows.forEach((row) => {
-    const brandKey = normalizeComparableText(row.brand);
+    const brandKey = getBrandNormalizationBucket(row.brand).key;
     const brandLabel = brandDisplayMap.get(brandKey) ?? cleanDisplayValue(row.brand);
     if (!brandLabel) {
       return;
@@ -1524,7 +1613,7 @@ export function getCatalogFiltersMetadata(): Record<string, unknown> {
       return;
     }
 
-    const brandKey = normalizeComparableText(row.brand);
+    const brandKey = getBrandNormalizationBucket(row.brand).key;
     const brandLabel = brandDisplayMap.get(brandKey) ?? cleanDisplayValue(row.brand);
     if (!brandLabel) {
       return;
@@ -1575,7 +1664,7 @@ export function getCatalogFiltersMetadata(): Record<string, unknown> {
       return;
     }
 
-    const brandKey = normalizeComparableText(row.brand);
+    const brandKey = getBrandNormalizationBucket(row.brand).key;
     const brandLabel = brandDisplayMap.get(brandKey) ?? cleanDisplayValue(row.brand);
     if (!brandLabel) {
       return;
@@ -1642,7 +1731,7 @@ export function getCatalogFiltersMetadata(): Record<string, unknown> {
       return;
     }
 
-    const brandKey = normalizeComparableText(row.brand);
+    const brandKey = getBrandNormalizationBucket(row.brand).key;
     const brandLabel = brandDisplayMap.get(brandKey) ?? cleanDisplayValue(row.brand);
     if (!brandLabel) {
       return;
