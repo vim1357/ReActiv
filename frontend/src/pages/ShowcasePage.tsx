@@ -446,6 +446,58 @@ function sortUniqueValues(values: Iterable<string>): string[] {
   );
 }
 
+function getFilterValueNoiseScore(rawValue: string): number {
+  const value = rawValue.trim();
+  if (!value) {
+    return 3;
+  }
+
+  const compact = value.replace(/\s+/g, "");
+  const hasLetters = /[A-Za-zА-Яа-яЁё]/.test(value);
+  const hasDigits = /\d/.test(value);
+  const letterCount = (value.match(/[A-Za-zА-Яа-яЁё]/g) ?? []).length;
+  const digitCount = (value.match(/\d/g) ?? []).length;
+  const letterOnlyTokens = value
+    .split(/\s+/)
+    .map((token) => token.replace(/[^A-Za-zА-Яа-яЁё]/g, ""))
+    .filter(Boolean);
+  const hasLongLetterToken = letterOnlyTokens.some((token) => token.length >= 3);
+  const shortModelLikePattern = /^[A-Za-zА-Яа-яЁё]{1,3}\d{1,4}[A-Za-zА-Яа-яЁё]{0,2}$/;
+
+  if (shortModelLikePattern.test(compact) && compact.length <= 7) {
+    return 0;
+  }
+
+  if (!hasLetters) {
+    return 3;
+  }
+
+  if (hasDigits && !hasLongLetterToken) {
+    return digitCount >= letterCount ? 3 : 2;
+  }
+
+  if (hasDigits && hasLongLetterToken) {
+    return 1;
+  }
+
+  if (!hasLongLetterToken && letterCount <= 2) {
+    return 2;
+  }
+
+  return 0;
+}
+
+function sortFilterValuesForUi(values: Iterable<string>): string[] {
+  return Array.from(new Set(values)).sort((left, right) => {
+    const byNoise = getFilterValueNoiseScore(left) - getFilterValueNoiseScore(right);
+    if (byNoise !== 0) {
+      return byNoise;
+    }
+
+    return left.localeCompare(right, "ru", { sensitivity: "base" });
+  });
+}
+
 function normalizeFilterValueForCompare(value: string): string {
   return value.trim().toLocaleLowerCase("ru-RU");
 }
@@ -1423,7 +1475,7 @@ export function ShowcasePage({
     }
 
     if (scopedBrandSets.length === 0) {
-      return filters.brand;
+      return sortFilterValuesForUi(filters.brand);
     }
 
     let intersection = new Set(scopedBrandSets[0]);
@@ -1434,7 +1486,7 @@ export function ShowcasePage({
       );
     }
 
-    return sortUniqueValues(intersection);
+    return sortFilterValuesForUi(intersection);
   }, [filters, selectedVehicleTypes, tenantMetadataKey]);
 
   const availableModels = useMemo(() => {
