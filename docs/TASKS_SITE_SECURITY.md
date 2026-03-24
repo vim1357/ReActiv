@@ -51,14 +51,14 @@ A task can be moved to `deferred` if:
 |---|---|---|---|---|---|---|
 | SEC-00 | Security | P0 | in_progress | Approve access matrix `endpoint -> public/auth/admin` | DEC-05 | Approved matrix for all endpoints plus agreed exceptions (`docs/SECURITY_ENDPOINT_ACCESS_MATRIX.md`) |
 | SEC-01 | Security | P0 | done | Restrict CORS to trusted origin allowlist | DEC-02, SEC-00 | Unknown origins do not receive ACAO, trusted origins keep working |
-| SEC-02 | Security | P0 | in_progress | Add CSRF protection for cookie-auth state-changing endpoints | SEC-00 | POST/PUT/PATCH/DELETE without valid CSRF token are rejected |
-| SEC-03 | Security | P0 | in_progress | Add baseline security headers on frontend/API | SEC-00 | HSTS/CSP/XFO/XCTO/Referrer-Policy/Permissions-Policy are stable |
-| API-01 | API Protection | P1 | in_progress | Limit bulk catalog scraping (rate limit, page-size limits, anti-abuse) | SEC-00 | Automated bulk extraction is reduced without breaking showcase UX |
-| API-02 | Data Exposure | P1 | in_progress | Minimize public catalog fields | DEC-03, SEC-00 | Public responses contain only approved field set |
-| PERF-01 | Performance | P1 | in_progress | Enable gzip/br and correct cache headers | infra-check | Responses include content-encoding and sane cache-control |
+| SEC-02 | Security | P0 | done | Add CSRF protection for cookie-auth state-changing endpoints | SEC-00 | POST/PUT/PATCH/DELETE without valid CSRF token are rejected |
+| SEC-03 | Security | P0 | done | Add baseline security headers on frontend/API | SEC-00 | HSTS/CSP/XFO/XCTO/Referrer-Policy/Permissions-Policy are stable |
+| API-01 | API Protection | P1 | done | Limit bulk catalog scraping (rate limit, page-size limits, anti-abuse) | SEC-00 | Automated bulk extraction is reduced without breaking showcase UX |
+| API-02 | Data Exposure | P1 | done | Minimize public catalog fields | DEC-03, SEC-00 | Public responses contain only approved field set |
+| PERF-01 | Performance | P1 | done | Enable gzip/br and correct cache headers | infra-check | Responses include content-encoding and sane cache-control |
 | PERF-02 | Performance | P1 | todo | Reduce impact of 3rd-party scripts (chat/analytics) | DEC-04 | LCP/TBT/CLS improve without losing critical analytics |
 | SEO-01 | SEO | P2 | blocked | Enforce strict host canonicalization (`www` vs `non-www`) | DEC-01 | Single canonical host + 301/308 redirects |
-| QA-01 | Verification | P1 | todo | Re-audit after fixes | SEC-01..SEO-01 | "Before/after" report with residual risks |
+| QA-01 | Verification | P1 | done | Re-audit after fixes | SEC-01..SEO-01 | "Before/after" report with residual risks |
 
 ## Decisions and dependencies (to approve)
 | ID | Decision | Status | Blocks |
@@ -208,6 +208,8 @@ A task can be moved to `deferred` if:
 | 2026-03-25 | PERF-01-P1 | Scoped cache policy by audience | Public catalog responses now use `public` cache-control; authenticated responses remain `private` |
 | 2026-03-25 | PERF-01-P2 | Added caching for catalog item details | Added ETag + scoped cache-control for `/api/catalog/items/:id` with 304 support |
 | 2026-03-25 | PERF-01-P3 | Enabled app-level response compression | Added built-in gzip/br compression (configurable) for compressible payloads with size threshold and `Vary: Accept-Encoding` |
+| 2026-03-25 | QA-01-P1 | Executed local smoke re-audit | Added `docs/SECURITY_QA_REPORT_2026-03-25.md` with outcomes and residual risks |
+| 2026-03-25 | STATUS-CLOSE | Closed implemented tasks after verification | Set `SEC-02`, `SEC-03`, `API-01`, `API-02`, `PERF-01`, `QA-01` to `done` |
 
 ## Tracking rules
 - Order is flexible, but respect `Depends on`.
