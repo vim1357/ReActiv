@@ -71,10 +71,28 @@ const PUBLIC_CATALOG_RATE_LIMIT_MAX_BUCKETS = parsePositiveIntEnv(
   1_000,
   500_000,
 );
+const PUBLIC_CATALOG_MAX_PAGE = parsePositiveIntEnv(
+  "PUBLIC_CATALOG_MAX_PAGE",
+  100,
+  1,
+  10_000,
+);
 const PUBLIC_CATALOG_MAX_PAGE_SIZE = parsePositiveIntEnv(
   "PUBLIC_CATALOG_MAX_PAGE_SIZE",
   40,
   5,
+  100,
+);
+const PUBLIC_CATALOG_MAX_SEARCH_LENGTH = parsePositiveIntEnv(
+  "PUBLIC_CATALOG_MAX_SEARCH_LENGTH",
+  120,
+  20,
+  1_000,
+);
+const PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD = parsePositiveIntEnv(
+  "PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD",
+  12,
+  1,
   100,
 );
 const PUBLIC_CATALOG_ITEM_DETAILS_MAX_REQUESTS = parsePositiveIntEnv(
@@ -254,6 +272,22 @@ function applyPrivateCacheHeaders(
   );
 }
 
+function capArray<T>(value: T[] | undefined, maxSize: number): T[] | undefined {
+  if (!value || value.length <= maxSize) {
+    return value;
+  }
+
+  return value.slice(0, maxSize);
+}
+
+function capStringLength(value: string | undefined, maxLength: number): string | undefined {
+  if (!value || value.length <= maxLength) {
+    return value;
+  }
+
+  return value.slice(0, maxLength);
+}
+
 function applyPublicQueryCaps(
   query: ReturnType<typeof parseCatalogQuery>,
   isAuthenticated: boolean,
@@ -264,7 +298,21 @@ function applyPublicQueryCaps(
 
   return {
     ...query,
+    page: Math.min(query.page, PUBLIC_CATALOG_MAX_PAGE),
     pageSize: Math.min(query.pageSize, PUBLIC_CATALOG_MAX_PAGE_SIZE),
+    search: capStringLength(query.search, PUBLIC_CATALOG_MAX_SEARCH_LENGTH),
+    offerCode: capArray(query.offerCode, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    status: capArray(query.status, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    city: capArray(query.city, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    brand: capArray(query.brand, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    model: capArray(query.model, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    modification: capArray(query.modification, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    vehicleType: capArray(query.vehicleType, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    ptsType: capArray(query.ptsType, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    storageAddress: capArray(query.storageAddress, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    bookingStatus: capArray(query.bookingStatus, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    hasEncumbrance: capArray(query.hasEncumbrance, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
+    isDeregistered: capArray(query.isDeregistered, PUBLIC_CATALOG_MAX_FILTER_VALUES_PER_FIELD),
     responsiblePerson: undefined,
     externalId: undefined,
     crmRef: undefined,
