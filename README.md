@@ -139,6 +139,8 @@ npm --prefix frontend run dev
 - `CSRF_SECRET` (optional, overrides server-generated CSRF signing secret)
 - `CSRF_PROTECTION_ENABLED` (optional, default: `true`; set to `false` only for emergency rollback)
 - `PUBLIC_CATALOG_RATE_LIMIT_WINDOW_MS` (optional, default: `60000`)
+- `PUBLIC_CATALOG_RATE_LIMIT_CLEANUP_INTERVAL_MS` (optional, default: `60000`)
+- `PUBLIC_CATALOG_RATE_LIMIT_MAX_BUCKETS` (optional, default: `20000`)
 - `PUBLIC_CATALOG_SUMMARY_MAX_REQUESTS` (optional, default: `120`)
 - `PUBLIC_CATALOG_FILTERS_MAX_REQUESTS` (optional, default: `120`)
 - `PUBLIC_CATALOG_ITEMS_MAX_REQUESTS` (optional, default: `180`)

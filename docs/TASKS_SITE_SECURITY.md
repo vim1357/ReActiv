@@ -1,6 +1,6 @@
 # Website Security Tasks (reactiv.pro)
 
-Last updated: 2026-03-24
+Last updated: 2026-03-25
 Owner: Codex + project owner
 
 ## Why this file exists
@@ -199,6 +199,7 @@ A task can be moved to `deferred` if:
 | 2026-03-24 | API-02-P1 | Masked additional public catalog fields | Hid external/CRM identifiers and sensitive filter dimensions for public users |
 | 2026-03-25 | API-02-P2 | Blocked sensitive public catalog filters | Public requests now ignore internal/contact filters to prevent inference probing |
 | 2026-03-25 | SEC-03-P2 | Added CSP report telemetry endpoint | Added `POST /api/security/csp-report`, enabled CSP report-uri enrichment and normalized security logs |
+| 2026-03-25 | API-01-P3 | Hardened rate limiter state management | Added cleanup interval and max-buckets cap to keep in-memory limiter bounded under abuse |
 
 ## Tracking rules
 - Order is flexible, but respect `Depends on`.

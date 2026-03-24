@@ -59,6 +59,18 @@ const PUBLIC_CATALOG_ITEMS_MAX_REQUESTS = parsePositiveIntEnv(
   10,
   20_000,
 );
+const PUBLIC_CATALOG_RATE_LIMIT_CLEANUP_INTERVAL_MS = parsePositiveIntEnv(
+  "PUBLIC_CATALOG_RATE_LIMIT_CLEANUP_INTERVAL_MS",
+  60_000,
+  5_000,
+  600_000,
+);
+const PUBLIC_CATALOG_RATE_LIMIT_MAX_BUCKETS = parsePositiveIntEnv(
+  "PUBLIC_CATALOG_RATE_LIMIT_MAX_BUCKETS",
+  20_000,
+  1_000,
+  500_000,
+);
 const PUBLIC_CATALOG_MAX_PAGE_SIZE = parsePositiveIntEnv(
   "PUBLIC_CATALOG_MAX_PAGE_SIZE",
   40,
@@ -73,12 +85,62 @@ const PUBLIC_CATALOG_ITEM_DETAILS_MAX_REQUESTS = parsePositiveIntEnv(
 );
 
 const publicCatalogRateLimitBuckets = new Map<string, number[]>();
+let lastPublicCatalogRateLimitCleanupMs = 0;
+
+function cleanupPublicCatalogRateLimitBuckets(nowMs: number): void {
+  if (
+    lastPublicCatalogRateLimitCleanupMs > 0 &&
+    nowMs - lastPublicCatalogRateLimitCleanupMs < PUBLIC_CATALOG_RATE_LIMIT_CLEANUP_INTERVAL_MS
+  ) {
+    return;
+  }
+
+  const threshold = nowMs - PUBLIC_CATALOG_RATE_LIMIT_WINDOW_MS;
+  for (const [bucketKey, timestamps] of publicCatalogRateLimitBuckets.entries()) {
+    const fresh = timestamps.filter((item) => item >= threshold);
+    if (fresh.length === 0) {
+      publicCatalogRateLimitBuckets.delete(bucketKey);
+      continue;
+    }
+
+    publicCatalogRateLimitBuckets.set(bucketKey, fresh);
+  }
+
+  lastPublicCatalogRateLimitCleanupMs = nowMs;
+}
+
+function ensurePublicCatalogRateLimitCapacity(key: string, nowMs: number): void {
+  if (publicCatalogRateLimitBuckets.has(key)) {
+    return;
+  }
+
+  if (publicCatalogRateLimitBuckets.size < PUBLIC_CATALOG_RATE_LIMIT_MAX_BUCKETS) {
+    return;
+  }
+
+  cleanupPublicCatalogRateLimitBuckets(nowMs);
+
+  while (
+    !publicCatalogRateLimitBuckets.has(key) &&
+    publicCatalogRateLimitBuckets.size >= PUBLIC_CATALOG_RATE_LIMIT_MAX_BUCKETS
+  ) {
+    const oldestKey = publicCatalogRateLimitBuckets.keys().next().value;
+    if (typeof oldestKey !== "string") {
+      break;
+    }
+
+    publicCatalogRateLimitBuckets.delete(oldestKey);
+  }
+}
 
 function isPublicCatalogRateLimited(
   key: string,
   maxRequests: number,
   nowMs: number,
 ): boolean {
+  cleanupPublicCatalogRateLimitBuckets(nowMs);
+  ensurePublicCatalogRateLimitCapacity(key, nowMs);
+
   const bucket = publicCatalogRateLimitBuckets.get(key) ?? [];
   const threshold = nowMs - PUBLIC_CATALOG_RATE_LIMIT_WINDOW_MS;
   const fresh = bucket.filter((item) => item >= threshold);
