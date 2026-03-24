@@ -12,6 +12,7 @@
     "enrich-reso-media": "tsx src/scripts/enrich-reso-media.ts",
     "sync-reso-media-via-api": "tsx src/scripts/sync-reso-media-via-api.ts",
     "sync-alpha-media-via-api": "tsx src/scripts/sync-alpha-media-via-api.ts",
+    "extract-avito-media": "tsx src/scripts/extract-avito-media.ts",
     "sync-card-previews": "tsx src/scripts/sync-card-previews.ts",
     "snapshot-media-health": "tsx src/scripts/snapshot-media-health.ts"
   },
