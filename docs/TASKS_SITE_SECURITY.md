@@ -211,6 +211,7 @@ A task can be moved to `deferred` if:
 | 2026-03-25 | DEC-04 | Approved frontend performance SLO targets | Added `docs/FRONTEND_PERFORMANCE_SLO.md` with LCP/CLS/TBT thresholds and release guardrails |
 | 2026-03-25 | SEC-00-CLOSE | Closed access-matrix governance task | Marked SEC-00 as `done` based on approved endpoint matrix and explicit exception list |
 | 2026-03-25 | SEO-01-P1 | Added safe canonical redirect implementation gate | Added backend `CANONICAL_REDIRECT_*` runtime controls with GET/HEAD redirects from non-canonical host to canonical host |
+| 2026-03-25 | SEO-01-P2 | Added canonical redirect rollout runbook | Added `docs/CANONICAL_REDIRECT_ROLLOUT.md` with env values, verification, monitoring, and rollback steps |
 | 2026-03-25 | QA-01-P1 | Executed local smoke re-audit | Added `docs/SECURITY_QA_REPORT_2026-03-25.md` with outcomes and residual risks |
 | 2026-03-25 | STATUS-CLOSE | Closed implemented tasks after verification | Set `SEC-02`, `SEC-03`, `API-01`, `API-02`, `PERF-01`, `QA-01` to `done` |
 
