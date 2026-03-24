@@ -52,7 +52,7 @@ A task can be moved to `deferred` if:
 | SEC-00 | Security | P0 | in_progress | Approve access matrix `endpoint -> public/auth/admin` | DEC-05 | Approved matrix for all endpoints plus agreed exceptions (`docs/SECURITY_ENDPOINT_ACCESS_MATRIX.md`) |
 | SEC-01 | Security | P0 | done | Restrict CORS to trusted origin allowlist | DEC-02, SEC-00 | Unknown origins do not receive ACAO, trusted origins keep working |
 | SEC-02 | Security | P0 | todo | Add CSRF protection for cookie-auth state-changing endpoints | SEC-00 | POST/PUT/PATCH/DELETE without valid CSRF token are rejected |
-| SEC-03 | Security | P0 | todo | Add baseline security headers on frontend/API | SEC-00 | HSTS/CSP/XFO/XCTO/Referrer-Policy/Permissions-Policy are stable |
+| SEC-03 | Security | P0 | in_progress | Add baseline security headers on frontend/API | SEC-00 | HSTS/CSP/XFO/XCTO/Referrer-Policy/Permissions-Policy are stable |
 | API-01 | API Protection | P1 | todo | Limit bulk catalog scraping (rate limit, page-size limits, anti-abuse) | SEC-00 | Automated bulk extraction is reduced without breaking showcase UX |
 | API-02 | Data Exposure | P1 | blocked | Minimize public catalog fields | DEC-03, SEC-00 | Public responses contain only approved field set |
 | PERF-01 | Performance | P1 | todo | Enable gzip/br and correct cache headers | infra-check | Responses include content-encoding and sane cache-control |
@@ -190,6 +190,7 @@ A task can be moved to `deferred` if:
 | 2026-03-24 | DEC-01 | Canonical host approved | Selected `reactiv.pro` as canonical host |
 | 2026-03-24 | DEC-02 | CORS allowlist approved | Trusted origins fixed for prod/local development |
 | 2026-03-24 | SEC-01 | CORS restricted to allowlist | Implemented strict origin allowlist with config override (`CORS_ALLOWED_ORIGINS`) |
+| 2026-03-24 | SEC-03-P1 | Added baseline response security headers | Implemented HSTS/XFO/XCTO/Referrer-Policy/Permissions-Policy + `CSP-Report-Only` on backend |
 
 ## Tracking rules
 - Order is flexible, but respect `Depends on`.

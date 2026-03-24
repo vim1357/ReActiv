@@ -40,6 +40,19 @@ const DEFAULT_ALLOWED_CORS_ORIGINS = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];
+const DEFAULT_CSP_REPORT_ONLY_POLICY = [
+  "default-src 'self' https: data: blob:",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+  "style-src 'self' 'unsafe-inline' https:",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https:",
+  "connect-src 'self' https: wss:",
+  "frame-src 'self' https:",
+].join("; ");
+const BASE_PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
 
 const ALWAYS_PUBLIC_PATHS = new Set([
   "/",
@@ -121,11 +134,21 @@ function isAllowedCorsOrigin(
   return allowedOrigins.has(normalizedOrigin);
 }
 
+function resolveCspReportOnlyPolicy(): string {
+  const configuredPolicy = process.env.CSP_REPORT_ONLY_POLICY?.trim();
+  if (configuredPolicy) {
+    return configuredPolicy;
+  }
+
+  return DEFAULT_CSP_REPORT_ONLY_POLICY;
+}
+
 initializeSchema();
 ensureBootstrapAdmin(app.log);
 
 async function startServer(): Promise<void> {
   const allowedCorsOrigins = resolveAllowedCorsOrigins();
+  const cspReportOnlyPolicy = resolveCspReportOnlyPolicy();
 
   await app.register(cors, {
     origin(origin, cb) {
@@ -148,6 +171,20 @@ async function startServer(): Promise<void> {
   });
   await registerAuthRoutes(app);
   await registerPlatformRoutes(app);
+
+  app.addHook("onSend", async (_request, reply, payload) => {
+    reply.header("X-Content-Type-Options", "nosniff");
+    reply.header("X-Frame-Options", "DENY");
+    reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    reply.header("Permissions-Policy", BASE_PERMISSIONS_POLICY);
+    reply.header("Content-Security-Policy-Report-Only", cspReportOnlyPolicy);
+
+    if (process.env.NODE_ENV === "production") {
+      reply.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    }
+
+    return payload;
+  });
 
   app.addHook("preHandler", async (request, reply) => {
     if (request.method === "OPTIONS") {

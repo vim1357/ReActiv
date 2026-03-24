@@ -134,6 +134,7 @@ npm --prefix frontend run dev
 - `PUBLIC_WEB_BASE_URL` (default: `https://reactiv.pro`)
 - `PUBLIC_SHARE_BASE_URL` (default: `https://api.reactiv.pro`)
 - `CORS_ALLOWED_ORIGINS` (optional, CSV allowlist; default: `https://reactiv.pro,https://www.reactiv.pro,http://localhost:5173,http://127.0.0.1:5173`)
+- `CSP_REPORT_ONLY_POLICY` (optional, overrides default `Content-Security-Policy-Report-Only`)
 - `BOOTSTRAP_ADMIN_LOGIN` (optional)
 - `BOOTSTRAP_ADMIN_PASSWORD` (optional)
 
