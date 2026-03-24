@@ -205,6 +205,7 @@ A task can be moved to `deferred` if:
 | 2026-03-25 | API-01-P3 | Hardened rate limiter state management | Added cleanup interval and max-buckets cap to keep in-memory limiter bounded under abuse |
 | 2026-03-25 | API-01-P4 | Added public query complexity caps | Capped `page`, `search` length and filter-list sizes for public catalog requests to reduce abusive heavy queries |
 | 2026-03-25 | PERF-01-P1 | Scoped cache policy by audience | Public catalog responses now use `public` cache-control; authenticated responses remain `private` |
+| 2026-03-25 | PERF-01-P2 | Added caching for catalog item details | Added ETag + scoped cache-control for `/api/catalog/items/:id` with 304 support |
 
 ## Tracking rules
 - Order is flexible, but respect `Depends on`.

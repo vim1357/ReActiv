@@ -525,6 +525,34 @@ export async function registerCatalogRoutes(app: FastifyInstance): Promise<void>
         return reply.code(404).send({ message: "Catalog item not found" });
       }
 
+      const latestImportBatch = getLatestSuccessfulImportBatch();
+      const roleBucket = request.authUser?.role ?? "public";
+      const etag = buildWeakEtag(
+        "catalog-item-details",
+        latestImportBatch?.id ?? "none",
+        roleBucket,
+        parsedId,
+      );
+
+      if (request.headers["if-none-match"] === etag) {
+        applyScopedCacheHeaders(
+          reply,
+          request.authUser ? "private" : "public",
+          60,
+          120,
+        );
+        reply.header("ETag", etag);
+        return reply.code(304).send();
+      }
+
+      applyScopedCacheHeaders(
+        reply,
+        request.authUser ? "private" : "public",
+        60,
+        120,
+      );
+      reply.header("ETag", etag);
+
       return reply
         .code(200)
         .send(sanitizeCatalogItemForRole(item, request.authUser?.role));
