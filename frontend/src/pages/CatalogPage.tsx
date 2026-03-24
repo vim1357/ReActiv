@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { getCatalogFilters, getCatalogItems } from "../api/client";
+import {
+  exportAdminCatalogMinJson,
+  getCatalogFilters,
+  getCatalogItems,
+} from "../api/client";
 import {
   BOOLEAN_FILTER_KEYS,
   FILTER_LABELS,
@@ -40,6 +44,7 @@ export function CatalogPage() {
   const [pageSize, setPageSize] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     async function loadFilters() {
@@ -130,6 +135,24 @@ export function CatalogPage() {
     setRangeFilters(INITIAL_RANGES);
     setSearch("");
     setPage(1);
+  }
+
+  async function handleExportMinJson(): Promise<void> {
+    const { page: _page, pageSize: _pageSize, ...queryWithoutPagination } = query;
+    setIsExporting(true);
+    setError(null);
+    try {
+      await exportAdminCatalogMinJson(queryWithoutPagination);
+    } catch (exportError) {
+      if (exportError instanceof Error && exportError.message === "FORBIDDEN") {
+        setError("Нет прав для выгрузки JSON");
+        return;
+      }
+
+      setError("Не удалось выгрузить JSON");
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   return (
@@ -300,6 +323,18 @@ export function CatalogPage() {
             </Link>
             <button type="button" className="secondary-button" onClick={clearFilters}>
               Сбросить фильтры
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={isExporting}
+              onClick={() => {
+                void handleExportMinJson();
+              }}
+            >
+              {isExporting
+                ? "Exporting JSON..."
+                : "Export JSON (id/brand/model)"}
             </button>
           </div>
 

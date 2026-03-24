@@ -685,10 +685,7 @@ interface CatalogRequestOptions {
   signal?: AbortSignal;
 }
 
-export async function getCatalogItems(
-  query: CatalogItemsQuery,
-  options: CatalogRequestOptions = {},
-): Promise<CatalogItemsResponse> {
+function buildCatalogQueryParams(query: CatalogItemsQuery): URLSearchParams {
   const params = new URLSearchParams();
 
   Object.entries(query).forEach(([key, value]) => {
@@ -704,6 +701,44 @@ export async function getCatalogItems(
     params.set(key, String(value));
   });
 
+  return params;
+}
+
+function parseDownloadFilename(contentDispositionHeader: string | null): string | null {
+  if (!contentDispositionHeader) {
+    return null;
+  }
+
+  const utf8Match = contentDispositionHeader.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const plainMatch = contentDispositionHeader.match(/filename=\"?([^\";]+)\"?/i);
+  return plainMatch?.[1] ?? null;
+}
+
+function triggerJsonDownload(blob: Blob, fileName: string): void {
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = downloadUrl;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(downloadUrl);
+}
+
+export async function getCatalogItems(
+  query: CatalogItemsQuery,
+  options: CatalogRequestOptions = {},
+): Promise<CatalogItemsResponse> {
+  const params = buildCatalogQueryParams(query);
+
   try {
     const response = await fetch(buildUrl(`/catalog/items?${params.toString()}`), {
       credentials: "include",
@@ -718,6 +753,41 @@ export async function getCatalogItems(
     if (error instanceof Error && error.name === "AbortError") {
       throw error;
     }
+    if (error instanceof TypeError) {
+      throw backendUnavailableError();
+    }
+    throw error;
+  }
+}
+
+export async function exportAdminCatalogMinJson(
+  query: CatalogItemsQuery,
+): Promise<void> {
+  const params = buildCatalogQueryParams(query);
+
+  try {
+    const response = await fetch(
+      buildUrl(`/admin/catalog/export-min?${params.toString()}`),
+      {
+        credentials: "include",
+      },
+    );
+
+    if (response.status === 403) {
+      throw new Error("FORBIDDEN");
+    }
+
+    if (!response.ok) {
+      throw new Error("Не удалось выгрузить JSON");
+    }
+
+    const blob = await response.blob();
+    const parsedFileName = parseDownloadFilename(
+      response.headers.get("content-disposition"),
+    );
+    const fallbackName = `catalog-export-min-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    triggerJsonDownload(blob, parsedFileName ?? fallbackName);
+  } catch (error) {
     if (error instanceof TypeError) {
       throw backendUnavailableError();
     }
