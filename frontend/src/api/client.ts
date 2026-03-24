@@ -29,9 +29,13 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:3001/api";
 const ACTIVITY_SESSION_KEY = "activity_session_id_v1";
 const ACTIVITY_ATTRIBUTION_KEY = "activity_attribution_v1";
+const CSRF_TOKEN_STORAGE_KEY = "csrf_token_v1";
+const CSRF_HEADER_NAME = "x-csrf-token";
 const MEDIA_GALLERY_CACHE_TTL_MS = 5 * 60 * 1000;
 const mediaGalleryCache = new Map<string, { galleryUrls: string[]; expiresAt: number }>();
 const STORED_PREVIEW_PREFIX = "stored-preview:";
+let csrfTokenCache: string | null = null;
+let csrfTokenLoaded = false;
 
 function buildUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
@@ -174,6 +178,65 @@ function backendUnavailableError(): Error {
   return new Error("Бэкенд недоступен. Запустите сервер на порту 3001.");
 }
 
+function readStoredCsrfToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const value = window.sessionStorage.getItem(CSRF_TOKEN_STORAGE_KEY);
+    if (!value) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  } catch {
+    return null;
+  }
+}
+
+function getCsrfToken(): string | null {
+  if (!csrfTokenLoaded) {
+    csrfTokenCache = readStoredCsrfToken();
+    csrfTokenLoaded = true;
+  }
+
+  return csrfTokenCache;
+}
+
+function setCsrfToken(token: string | undefined | null): void {
+  const normalized = typeof token === "string" ? token.trim() : "";
+  const nextToken = normalized.length > 0 ? normalized : null;
+
+  csrfTokenCache = nextToken;
+  csrfTokenLoaded = true;
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    if (nextToken) {
+      window.sessionStorage.setItem(CSRF_TOKEN_STORAGE_KEY, nextToken);
+    } else {
+      window.sessionStorage.removeItem(CSRF_TOKEN_STORAGE_KEY);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function withCsrfHeaders(headers: Record<string, string> = {}): Headers {
+  const merged = new Headers(headers);
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    merged.set(CSRF_HEADER_NAME, csrfToken);
+  }
+
+  return merged;
+}
+
 export async function login(
   loginValue: string,
   password: string,
@@ -204,7 +267,9 @@ export async function login(
       throw new Error(errorMessage);
     }
 
-    return (await response.json()) as AuthResponse;
+    const payload = (await response.json()) as AuthResponse;
+    setCsrfToken(payload.csrfToken);
+    return payload;
   } catch (error) {
     if (error instanceof TypeError) {
       throw backendUnavailableError();
@@ -241,9 +306,9 @@ export async function updatePlatformMode(
     const response = await fetch(buildUrl("/admin/platform/mode"), {
       method: "PATCH",
       credentials: "include",
-      headers: {
+      headers: withCsrfHeaders({
         "Content-Type": "application/json",
-      },
+      }),
       body: JSON.stringify({ mode }),
     });
 
@@ -288,7 +353,9 @@ export async function getCurrentUser(): Promise<AuthResponse> {
       throw new Error("Не удалось проверить сессию");
     }
 
-    return (await response.json()) as AuthResponse;
+    const payload = (await response.json()) as AuthResponse;
+    setCsrfToken(payload.csrfToken);
+    return payload;
   } catch (error) {
     if (error instanceof TypeError) {
       throw backendUnavailableError();
@@ -302,7 +369,9 @@ export async function logout(): Promise<void> {
     await fetch(buildUrl("/auth/logout"), {
       method: "POST",
       credentials: "include",
+      headers: withCsrfHeaders(),
     });
+    setCsrfToken(null);
   } catch (error) {
     if (error instanceof TypeError) {
       throw backendUnavailableError();
@@ -358,9 +427,9 @@ export async function createAdminUser(
     const response = await fetch(buildUrl("/admin/users"), {
       method: "POST",
       credentials: "include",
-      headers: {
+      headers: withCsrfHeaders({
         "Content-Type": "application/json",
-      },
+      }),
       body: JSON.stringify(input),
     });
 
@@ -399,6 +468,7 @@ export async function deleteAdminUser(userId: number): Promise<void> {
     const response = await fetch(buildUrl(`/admin/users/${userId}`), {
       method: "DELETE",
       credentials: "include",
+      headers: withCsrfHeaders(),
     });
 
     if (response.status === 403) {
@@ -436,6 +506,7 @@ export async function resetAdminUserPassword(
     const response = await fetch(buildUrl(`/admin/users/${userId}/reset-password`), {
       method: "POST",
       credentials: "include",
+      headers: withCsrfHeaders(),
     });
 
     if (response.status === 403) {
@@ -476,9 +547,9 @@ export async function updateAdminUserMeta(
     const response = await fetch(buildUrl(`/admin/users/${userId}/meta`), {
       method: "PATCH",
       credentials: "include",
-      headers: {
+      headers: withCsrfHeaders({
         "Content-Type": "application/json",
-      },
+      }),
       body: JSON.stringify(input),
     });
 
@@ -521,9 +592,10 @@ export async function uploadImport(
     const response = await fetch(
       buildUrl(`/imports?tenantId=${encodeURIComponent(tenantId)}`),
       {
-      method: "POST",
-      credentials: "include",
-      body: formData,
+        method: "POST",
+        credentials: "include",
+        headers: withCsrfHeaders(),
+        body: formData,
       },
     );
 
@@ -593,6 +665,7 @@ export async function clearImports(
     const response = await fetch(buildUrl(`/imports${query ? `?${query}` : ""}`), {
       method: "DELETE",
       credentials: "include",
+      headers: withCsrfHeaders(),
     });
 
     if (!response.ok) {
@@ -967,6 +1040,7 @@ export async function addFavoriteItem(itemId: number): Promise<FavoriteMutationR
     const response = await fetch(buildUrl(`/favorites/${itemId}`), {
       method: "POST",
       credentials: "include",
+      headers: withCsrfHeaders(),
     });
 
     if (response.status === 401) {
@@ -991,6 +1065,7 @@ export async function removeFavoriteItem(itemId: number): Promise<FavoriteMutati
     const response = await fetch(buildUrl(`/favorites/${itemId}`), {
       method: "DELETE",
       credentials: "include",
+      headers: withCsrfHeaders(),
     });
 
     if (response.status === 401) {
@@ -1065,9 +1140,9 @@ export async function logActivityEvent(input: ActivityEventInput): Promise<void>
     const response = await fetch(buildUrl("/activity/events"), {
       method: "POST",
       credentials: "include",
-      headers: {
+      headers: withCsrfHeaders({
         "Content-Type": "application/json",
-      },
+      }),
       keepalive: true,
       body: JSON.stringify({
         ...input,
@@ -1075,7 +1150,7 @@ export async function logActivityEvent(input: ActivityEventInput): Promise<void>
       }),
     });
 
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 403) {
       await postGuestActivityEvent(input);
     }
   } catch {

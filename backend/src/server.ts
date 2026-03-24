@@ -19,7 +19,7 @@ import { registerFavoriteRoutes } from "./routes/favorite-routes";
 import { registerSitemapRoutes } from "./routes/sitemap-routes";
 import { registerSiteVerificationRoutes } from "./routes/site-verification-routes";
 import { getPlatformMode } from "./repositories/platform-settings-repository";
-import { authenticateRequest } from "./services/auth-service";
+import { authenticateRequest, getCsrfHeaderName, hasValidCsrfToken } from "./services/auth-service";
 import { ensureBootstrapAdmin } from "./startup/bootstrap-admin";
 import { startMediaHealthScheduler } from "./services/media-health-scheduler";
 
@@ -134,6 +134,10 @@ function isAllowedCorsOrigin(
   return allowedOrigins.has(normalizedOrigin);
 }
 
+function isStateChangingMethod(method: string): boolean {
+  return method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
+}
+
 function resolveCspReportOnlyPolicy(): string {
   const configuredPolicy = process.env.CSP_REPORT_ONLY_POLICY?.trim();
   if (configuredPolicy) {
@@ -218,6 +222,12 @@ async function startServer(): Promise<void> {
     }
 
     request.authUser = authUser;
+
+    if (isStateChangingMethod(request.method) && !hasValidCsrfToken(request)) {
+      return reply.code(403).send({
+        message: `Invalid CSRF token. Send header ${getCsrfHeaderName()}.`,
+      });
+    }
   });
 
   await registerImportRoutes(app);

@@ -17,6 +17,8 @@ const PASSWORD_HASH_PREFIX = "scrypt";
 const PASSWORD_HASH_KEY_LENGTH = 64;
 const SESSION_COOKIE_NAME = "lease_platform_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const CSRF_HEADER_NAME = "x-csrf-token";
+const CSRF_SECRET = process.env.CSRF_SECRET?.trim() || randomBytes(32).toString("base64url");
 
 export interface AuthLoginResult {
   user: PublicAuthUser;
@@ -60,6 +62,33 @@ function createSessionToken(): string {
 
 function hashSessionToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function toCsrfToken(sessionToken: string): string {
+  return createHash("sha256")
+    .update(`${CSRF_SECRET}:${sessionToken}`)
+    .digest("base64url");
+}
+
+function readCsrfHeaderValue(request: FastifyRequest): string | null {
+  const rawHeader = request.headers[CSRF_HEADER_NAME];
+  const value = Array.isArray(rawHeader)
+    ? String(rawHeader[0] ?? "").trim()
+    : typeof rawHeader === "string"
+      ? rawHeader.trim()
+      : "";
+
+  return value || null;
+}
+
+function timingSafeEqualText(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left, "utf8");
+  const rightBuffer = Buffer.from(right, "utf8");
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 export function normalizeLogin(rawLogin: string): string {
@@ -142,4 +171,35 @@ export function logoutRequest(request: FastifyRequest): void {
 
 export function getSessionCookieName(): string {
   return SESSION_COOKIE_NAME;
+}
+
+export function issueCsrfToken(sessionToken: string): string {
+  return toCsrfToken(sessionToken);
+}
+
+export function getCsrfHeaderName(): string {
+  return CSRF_HEADER_NAME;
+}
+
+export function getCsrfTokenForRequest(request: FastifyRequest): string | null {
+  const sessionToken = request.cookies[SESSION_COOKIE_NAME];
+  if (!sessionToken) {
+    return null;
+  }
+
+  return toCsrfToken(sessionToken);
+}
+
+export function hasValidCsrfToken(request: FastifyRequest): boolean {
+  const expectedToken = getCsrfTokenForRequest(request);
+  if (!expectedToken) {
+    return false;
+  }
+
+  const providedToken = readCsrfHeaderValue(request);
+  if (!providedToken) {
+    return false;
+  }
+
+  return timingSafeEqualText(providedToken, expectedToken);
 }

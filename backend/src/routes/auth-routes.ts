@@ -1,7 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { z, ZodError } from "zod";
 import {
+  getCsrfTokenForRequest,
   getSessionCookieName,
+  issueCsrfToken,
   loginWithPassword,
   logoutRequest,
 } from "../services/auth-service";
@@ -29,7 +31,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         maxAge: loginResult.sessionMaxAgeSeconds,
       });
 
-      return reply.code(200).send({ user: loginResult.user });
+      return reply.code(200).send({
+        user: loginResult.user,
+        csrfToken: issueCsrfToken(loginResult.sessionToken),
+      });
     } catch (error) {
       if (error instanceof ZodError) {
         return reply.code(400).send({
@@ -47,7 +52,15 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(401).send({ message: "Требуется авторизация" });
     }
 
-    return reply.code(200).send({ user: request.authUser });
+    const csrfToken = getCsrfTokenForRequest(request);
+    if (!csrfToken) {
+      return reply.code(401).send({ message: "Требуется авторизация" });
+    }
+
+    return reply.code(200).send({
+      user: request.authUser,
+      csrfToken,
+    });
   });
 
   app.post("/api/auth/logout", async (request, reply) => {

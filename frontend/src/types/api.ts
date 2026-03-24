@@ -17,6 +17,7 @@ export interface AuthUser {
 
 export interface AuthResponse {
   user: AuthUser;
+  csrfToken?: string;
 }
 
 export interface PlatformModeResponse {
