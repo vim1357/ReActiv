@@ -52,6 +52,7 @@ const DEFAULT_CSP_REPORT_ONLY_POLICY = [
   "connect-src 'self' https: wss:",
   "frame-src 'self' https:",
 ].join("; ");
+const CSP_REPORT_ENDPOINT_PATH = "/api/security/csp-report";
 const BASE_PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
 
 const ALWAYS_PUBLIC_PATHS = new Set([
@@ -60,6 +61,7 @@ const ALWAYS_PUBLIC_PATHS = new Set([
   "/showcase",
   "/health",
   "/sitemap.xml",
+  CSP_REPORT_ENDPOINT_PATH,
   "/api/auth/login",
   "/api/platform/mode",
   "/api/public/activity/events",
@@ -165,12 +167,114 @@ function resolveCspReportOnlyPolicy(): string {
   return DEFAULT_CSP_REPORT_ONLY_POLICY;
 }
 
+function enrichCspPolicyWithReportUri(policy: string, reportPath: string, enabled: boolean): string {
+  if (!enabled) {
+    return policy;
+  }
+
+  const normalized = policy.toLowerCase();
+  if (normalized.includes("report-uri") || normalized.includes("report-to")) {
+    return policy;
+  }
+
+  const basePolicy = policy.trim().replace(/;+\s*$/u, "");
+  return `${basePolicy}; report-uri ${reportPath}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function asString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
+function sanitizeUrlForLog(value: unknown): string | null {
+  const raw = asString(value);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return raw.slice(0, 300);
+  }
+}
+
+function pickFirstString(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const resolved = asString(record[key]);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
+
+function mapLegacyCspReport(payload: unknown): Record<string, unknown> | null {
+  if (!isRecord(payload) || !isRecord(payload["csp-report"])) {
+    return null;
+  }
+
+  const report = payload["csp-report"];
+  return {
+    source: "legacy",
+    documentUri: sanitizeUrlForLog(report["document-uri"]),
+    blockedUri: sanitizeUrlForLog(report["blocked-uri"]),
+    effectiveDirective: asString(report["effective-directive"]),
+    violatedDirective: asString(report["violated-directive"]),
+    disposition: asString(report.disposition),
+    statusCode: Number.isFinite(Number(report["status-code"]))
+      ? Number(report["status-code"])
+      : null,
+  };
+}
+
+function mapReportingApiCspReports(payload: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  const result: Array<Record<string, unknown>> = [];
+  payload.forEach((entry) => {
+    if (!isRecord(entry) || entry.type !== "csp-violation" || !isRecord(entry.body)) {
+      return;
+    }
+
+    const body = entry.body;
+    result.push({
+      source: "reporting-api",
+      documentUri: sanitizeUrlForLog(pickFirstString(body, ["documentURL", "document-uri"])),
+      blockedUri: sanitizeUrlForLog(pickFirstString(body, ["blockedURL", "blocked-uri"])),
+      effectiveDirective: pickFirstString(body, ["effectiveDirective", "effective-directive"]),
+      violatedDirective: pickFirstString(body, ["violatedDirective", "violated-directive"]),
+      disposition: asString(body.disposition),
+      statusCode: Number.isFinite(Number(body.statusCode)) ? Number(body.statusCode) : null,
+    });
+  });
+
+  return result;
+}
+
 initializeSchema();
 ensureBootstrapAdmin(app.log);
 
 async function startServer(): Promise<void> {
   const allowedCorsOrigins = resolveAllowedCorsOrigins();
-  const cspReportOnlyPolicy = resolveCspReportOnlyPolicy();
+  const cspReportEndpointEnabled = parseBooleanEnv("CSP_REPORT_ENDPOINT_ENABLED", true);
+  const cspReportOnlyPolicy = enrichCspPolicyWithReportUri(
+    resolveCspReportOnlyPolicy(),
+    CSP_REPORT_ENDPOINT_PATH,
+    cspReportEndpointEnabled,
+  );
   const csrfProtectionEnabled = parseBooleanEnv("CSRF_PROTECTION_ENABLED", true);
 
   await app.register(cors, {
@@ -192,9 +296,62 @@ async function startServer(): Promise<void> {
       files: 1,
     },
   });
+  app.addContentTypeParser(
+    ["application/csp-report", "application/reports+json"],
+    { parseAs: "string" },
+    (_request, body, done) => {
+      if (typeof body !== "string") {
+        done(null, {});
+        return;
+      }
+
+      const normalized = body.trim();
+      if (!normalized) {
+        done(null, {});
+        return;
+      }
+
+      try {
+        done(null, JSON.parse(normalized));
+      } catch {
+        done(null, { rawBody: normalized.slice(0, 2000) });
+      }
+    },
+  );
   await registerAuthRoutes(app);
   await registerPlatformRoutes(app);
-  app.log.info({ csrfProtectionEnabled }, "csrf_protection_config");
+
+  app.post(CSP_REPORT_ENDPOINT_PATH, async (request, reply) => {
+    if (!cspReportEndpointEnabled) {
+      return reply.code(404).send({ message: "Not found" });
+    }
+
+    const legacyReport = mapLegacyCspReport(request.body);
+    const reportingApiReports = mapReportingApiCspReports(request.body);
+    const reports = [
+      ...(legacyReport ? [legacyReport] : []),
+      ...reportingApiReports,
+    ];
+
+    if (reports.length === 0) {
+      app.log.info(
+        { contentType: request.headers["content-type"] ?? null },
+        "csp_report_received_unparsed",
+      );
+      return reply.code(204).send();
+    }
+
+    reports.forEach((report) => {
+      app.log.info(report, "csp_violation_report");
+    });
+
+    return reply.code(204).send();
+  });
+
+  app.log.info(
+    { csrfProtectionEnabled, cspReportEndpointEnabled },
+    "security_runtime_config",
+  );
 
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("X-Content-Type-Options", "nosniff");

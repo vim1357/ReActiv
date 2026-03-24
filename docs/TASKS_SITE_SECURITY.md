@@ -198,6 +198,7 @@ A task can be moved to `deferred` if:
 | 2026-03-24 | DEC-03 | Approved public field policy | Added `docs/PUBLIC_CATALOG_FIELDS.md` as DEC-03 artifact |
 | 2026-03-24 | API-02-P1 | Masked additional public catalog fields | Hid external/CRM identifiers and sensitive filter dimensions for public users |
 | 2026-03-25 | API-02-P2 | Blocked sensitive public catalog filters | Public requests now ignore internal/contact filters to prevent inference probing |
+| 2026-03-25 | SEC-03-P2 | Added CSP report telemetry endpoint | Added `POST /api/security/csp-report`, enabled CSP report-uri enrichment and normalized security logs |
 
 ## Tracking rules
 - Order is flexible, but respect `Depends on`.
