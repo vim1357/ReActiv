@@ -1,7 +1,7 @@
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest } from "fastify";
 import { initializeSchema } from "./db/schema";
 import { registerAdminUserRoutes } from "./routes/admin-user-routes";
 import { registerAdminAlphaMediaRoutes } from "./routes/admin-alpha-media-routes";
@@ -134,6 +134,47 @@ function isAllowedCorsOrigin(
   }
 
   return allowedOrigins.has(normalizedOrigin);
+}
+
+function getFirstHeaderValue(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    const resolved = value[0];
+    if (typeof resolved !== "string") {
+      return null;
+    }
+
+    const normalized = resolved.trim();
+    return normalized || null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized || null;
+}
+
+function resolveRequestSourceOrigin(
+  request: FastifyRequest,
+): { source: "origin" | "referer"; normalizedOrigin: string | null } | null {
+  const originHeader = getFirstHeaderValue(request.headers.origin);
+  if (originHeader) {
+    return {
+      source: "origin",
+      normalizedOrigin: normalizeOriginValue(originHeader),
+    };
+  }
+
+  const refererHeader = getFirstHeaderValue(request.headers.referer);
+  if (refererHeader) {
+    return {
+      source: "referer",
+      normalizedOrigin: normalizeOriginValue(refererHeader),
+    };
+  }
+
+  return null;
 }
 
 function isStateChangingMethod(method: string): boolean {
@@ -291,6 +332,7 @@ async function startServer(): Promise<void> {
     cspReportEndpointEnabled,
   );
   const csrfProtectionEnabled = parseBooleanEnv("CSRF_PROTECTION_ENABLED", true);
+  const csrfOriginCheckEnabled = parseBooleanEnv("CSRF_ORIGIN_CHECK_ENABLED", true);
 
   await app.register(cors, {
     origin(origin, cb) {
@@ -364,7 +406,12 @@ async function startServer(): Promise<void> {
   });
 
   app.log.info(
-    { csrfProtectionEnabled, cspReportEndpointEnabled, cspEnforceEnabled },
+    {
+      csrfProtectionEnabled,
+      csrfOriginCheckEnabled,
+      cspReportEndpointEnabled,
+      cspEnforceEnabled,
+    },
     "security_runtime_config",
   );
 
@@ -418,6 +465,28 @@ async function startServer(): Promise<void> {
     }
 
     request.authUser = authUser;
+
+    if (csrfOriginCheckEnabled && isStateChangingMethod(request.method)) {
+      const sourceOrigin = resolveRequestSourceOrigin(request);
+      if (
+        sourceOrigin &&
+        (
+          !sourceOrigin.normalizedOrigin ||
+          !allowedCorsOrigins.has(sourceOrigin.normalizedOrigin)
+        )
+      ) {
+        app.log.warn(
+          {
+            method: request.method,
+            path: requestPath,
+            source: sourceOrigin.source,
+            origin: sourceOrigin.normalizedOrigin,
+          },
+          "csrf_origin_blocked",
+        );
+        return reply.code(403).send({ message: "Invalid request origin." });
+      }
+    }
 
     if (
       csrfProtectionEnabled &&

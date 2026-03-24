@@ -201,6 +201,7 @@ A task can be moved to `deferred` if:
 | 2026-03-25 | SEC-03-P2 | Added CSP report telemetry endpoint | Added `POST /api/security/csp-report`, enabled CSP report-uri enrichment and normalized security logs |
 | 2026-03-25 | SEC-03-P3 | Disabled caching for auth/session responses | Added `no-store` headers for `/api/auth/login`, `/api/auth/me`, `/api/auth/logout` |
 | 2026-03-25 | SEC-03-P4 | Added CSP enforcement rollout flag | Added `CSP_ENFORCE_ENABLED`/`CSP_ENFORCE_POLICY` for controlled switch from report-only to enforced CSP |
+| 2026-03-25 | SEC-02-P3 | Added origin/referrer check for mutating auth requests | Added allowlist validation for `Origin`/`Referer` on authenticated state-changing endpoints with rollback flag |
 | 2026-03-25 | API-01-P3 | Hardened rate limiter state management | Added cleanup interval and max-buckets cap to keep in-memory limiter bounded under abuse |
 | 2026-03-25 | API-01-P4 | Added public query complexity caps | Capped `page`, `search` length and filter-list sizes for public catalog requests to reduce abusive heavy queries |
 

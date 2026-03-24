@@ -140,6 +140,7 @@ npm --prefix frontend run dev
 - `CSP_ENFORCE_POLICY` (optional, defaults to report-only policy value; used only when `CSP_ENFORCE_ENABLED=true`)
 - `CSRF_SECRET` (optional, overrides server-generated CSRF signing secret)
 - `CSRF_PROTECTION_ENABLED` (optional, default: `true`; set to `false` only for emergency rollback)
+- `CSRF_ORIGIN_CHECK_ENABLED` (optional, default: `true`; checks `Origin`/`Referer` on authenticated mutating requests)
 - `PUBLIC_CATALOG_RATE_LIMIT_WINDOW_MS` (optional, default: `60000`)
 - `PUBLIC_CATALOG_RATE_LIMIT_CLEANUP_INTERVAL_MS` (optional, default: `60000`)
 - `PUBLIC_CATALOG_RATE_LIMIT_MAX_BUCKETS` (optional, default: `20000`)
