@@ -235,6 +235,8 @@ Base URL: `/api`
 See details in:
 - `docs/IMPORT_CONTRACT.md`
 - `docs/ARCHITECTURE_GUARDRAILS.md`
+- `docs/TASKS_SITE_SECURITY.md` (risk-driven security backlog)
+- `docs/TASKS_SEO_CONVERSION.md` (separate SEO/conversion backlog)
 
 ## Scripts
 

@@ -56,8 +56,8 @@ A task can be moved to `deferred` if:
 | API-01 | API Protection | P1 | done | Limit bulk catalog scraping (rate limit, page-size limits, anti-abuse) | SEC-00 | Automated bulk extraction is reduced without breaking showcase UX |
 | API-02 | Data Exposure | P1 | done | Minimize public catalog fields | DEC-03, SEC-00 | Public responses contain only approved field set |
 | PERF-01 | Performance | P1 | done | Enable gzip/br and correct cache headers | infra-check | Responses include content-encoding and sane cache-control |
-| PERF-02 | Performance | P1 | in_progress | Reduce impact of 3rd-party scripts (chat/analytics) | DEC-04 | LCP/TBT/CLS improve without losing critical analytics |
-| SEO-01 | SEO | P2 | in_progress | Enforce strict host canonicalization (`www` vs `non-www`) | DEC-01 | Single canonical host + 301/308 redirects |
+| PERF-02 | Performance | P1 | deferred | Reduce impact of 3rd-party scripts (chat/analytics) | DEC-04 | Managed in `docs/TASKS_SEO_CONVERSION.md` (SEO/conversion scope) |
+| SEO-01 | SEO | P2 | deferred | Enforce strict host canonicalization (`www` vs `non-www`) | DEC-01 | Managed in `docs/TASKS_SEO_CONVERSION.md` (SEO/conversion scope) |
 | QA-01 | Verification | P1 | done | Re-audit after fixes | SEC-01..SEO-01 | "Before/after" report with residual risks |
 
 ## Decisions and dependencies (to approve)
@@ -158,15 +158,20 @@ A task can be moved to `deferred` if:
 
 ## What we do now (real-risk focus)
 `Now`:
-- PERF-02 completion against approved SLO (`DEC-04`) with release-safe checks.
-- SEO-01 rollout: enable canonical redirect at edge/runtime config and verify redirects.
+- Security scope for current stage is closed.
+- Keep runtime monitoring and rollback flags ready for implemented controls.
 
 `Next`:
-- Delta QA after `PERF-02` and `SEO-01` to confirm no regressions in auth/catalog/share flows.
+- Run independent technical/security re-audit and re-open this backlog only for newly confirmed risks.
+- Continue SEO/conversion work in `docs/TASKS_SEO_CONVERSION.md`.
 
 `Later / based on data`:
-- Advanced 3rd-party performance tuning.
 - Enterprise-level anti-bot mechanisms (only if justified by abuse data).
+
+## Scope split note (security vs growth)
+- `PERF-02` and `SEO-01` are intentionally moved out of this security backlog.
+- They remain important, but are tracked as SEO/conversion tasks in `docs/TASKS_SEO_CONVERSION.md`.
+- This security file should contain only risk-driven controls (`security`, `api protection`, `data exposure`, verification).
 
 ## Minimal verification checklist per iteration
 1. Auth smoke: login/me/logout, admin access, favorites add/remove.
@@ -216,6 +221,8 @@ A task can be moved to `deferred` if:
 | 2026-03-25 | SEO-01-P2 | Added canonical redirect rollout runbook | Added `docs/CANONICAL_REDIRECT_ROLLOUT.md` with env values, verification, monitoring, and rollback steps |
 | 2026-03-25 | QA-01-P1 | Executed local smoke re-audit | Added `docs/SECURITY_QA_REPORT_2026-03-25.md` with outcomes and residual risks |
 | 2026-03-25 | STATUS-CLOSE | Closed implemented tasks after verification | Set `SEC-02`, `SEC-03`, `API-01`, `API-02`, `PERF-01`, `QA-01` to `done` |
+| 2026-03-25 | SCOPE-SPLIT | Moved non-security items out of this backlog | Marked `PERF-02` and `SEO-01` as `deferred` here and transferred tracking to `docs/TASKS_SEO_CONVERSION.md` |
+| 2026-03-25 | SECURITY-BLOCK-CLOSE | Closed current security block by agreement | Security tasks for current stage considered complete; next changes require independent audit findings |
 
 ## Tracking rules
 - Order is flexible, but respect `Depends on`.
