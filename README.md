@@ -136,6 +136,8 @@ npm --prefix frontend run dev
 - `CORS_ALLOWED_ORIGINS` (optional, CSV allowlist; default: `https://reactiv.pro,https://www.reactiv.pro,http://localhost:5173,http://127.0.0.1:5173`)
 - `CSP_REPORT_ONLY_POLICY` (optional, overrides default `Content-Security-Policy-Report-Only`)
 - `CSP_REPORT_ENDPOINT_ENABLED` (optional, default: `true`; enables `POST /api/security/csp-report` intake for CSP telemetry)
+- `CSP_ENFORCE_ENABLED` (optional, default: `false`; when `true`, sends `Content-Security-Policy` instead of report-only)
+- `CSP_ENFORCE_POLICY` (optional, defaults to report-only policy value; used only when `CSP_ENFORCE_ENABLED=true`)
 - `CSRF_SECRET` (optional, overrides server-generated CSRF signing secret)
 - `CSRF_PROTECTION_ENABLED` (optional, default: `true`; set to `false` only for emergency rollback)
 - `PUBLIC_CATALOG_RATE_LIMIT_WINDOW_MS` (optional, default: `60000`)

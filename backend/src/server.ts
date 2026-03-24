@@ -167,6 +167,15 @@ function resolveCspReportOnlyPolicy(): string {
   return DEFAULT_CSP_REPORT_ONLY_POLICY;
 }
 
+function resolveCspEnforcePolicy(reportOnlyPolicy: string): string {
+  const configuredPolicy = process.env.CSP_ENFORCE_POLICY?.trim();
+  if (configuredPolicy) {
+    return configuredPolicy;
+  }
+
+  return reportOnlyPolicy;
+}
+
 function enrichCspPolicyWithReportUri(policy: string, reportPath: string, enabled: boolean): string {
   if (!enabled) {
     return policy;
@@ -270,8 +279,14 @@ ensureBootstrapAdmin(app.log);
 async function startServer(): Promise<void> {
   const allowedCorsOrigins = resolveAllowedCorsOrigins();
   const cspReportEndpointEnabled = parseBooleanEnv("CSP_REPORT_ENDPOINT_ENABLED", true);
+  const cspEnforceEnabled = parseBooleanEnv("CSP_ENFORCE_ENABLED", false);
   const cspReportOnlyPolicy = enrichCspPolicyWithReportUri(
     resolveCspReportOnlyPolicy(),
+    CSP_REPORT_ENDPOINT_PATH,
+    cspReportEndpointEnabled,
+  );
+  const cspEnforcePolicy = enrichCspPolicyWithReportUri(
+    resolveCspEnforcePolicy(cspReportOnlyPolicy),
     CSP_REPORT_ENDPOINT_PATH,
     cspReportEndpointEnabled,
   );
@@ -349,7 +364,7 @@ async function startServer(): Promise<void> {
   });
 
   app.log.info(
-    { csrfProtectionEnabled, cspReportEndpointEnabled },
+    { csrfProtectionEnabled, cspReportEndpointEnabled, cspEnforceEnabled },
     "security_runtime_config",
   );
 
@@ -358,7 +373,11 @@ async function startServer(): Promise<void> {
     reply.header("X-Frame-Options", "DENY");
     reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
     reply.header("Permissions-Policy", BASE_PERMISSIONS_POLICY);
-    reply.header("Content-Security-Policy-Report-Only", cspReportOnlyPolicy);
+    if (cspEnforceEnabled) {
+      reply.header("Content-Security-Policy", cspEnforcePolicy);
+    } else {
+      reply.header("Content-Security-Policy-Report-Only", cspReportOnlyPolicy);
+    }
 
     if (process.env.NODE_ENV === "production") {
       reply.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
