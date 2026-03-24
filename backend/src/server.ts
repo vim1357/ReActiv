@@ -138,6 +138,24 @@ function isStateChangingMethod(method: string): boolean {
   return method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
 }
 
+function parseBooleanEnv(name: string, fallback: boolean): boolean {
+  const raw = process.env[name];
+  if (!raw) {
+    return fallback;
+  }
+
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") {
+    return true;
+  }
+
+  if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") {
+    return false;
+  }
+
+  return fallback;
+}
+
 function resolveCspReportOnlyPolicy(): string {
   const configuredPolicy = process.env.CSP_REPORT_ONLY_POLICY?.trim();
   if (configuredPolicy) {
@@ -153,6 +171,7 @@ ensureBootstrapAdmin(app.log);
 async function startServer(): Promise<void> {
   const allowedCorsOrigins = resolveAllowedCorsOrigins();
   const cspReportOnlyPolicy = resolveCspReportOnlyPolicy();
+  const csrfProtectionEnabled = parseBooleanEnv("CSRF_PROTECTION_ENABLED", true);
 
   await app.register(cors, {
     origin(origin, cb) {
@@ -175,6 +194,7 @@ async function startServer(): Promise<void> {
   });
   await registerAuthRoutes(app);
   await registerPlatformRoutes(app);
+  app.log.info({ csrfProtectionEnabled }, "csrf_protection_config");
 
   app.addHook("onSend", async (_request, reply, payload) => {
     reply.header("X-Content-Type-Options", "nosniff");
@@ -223,7 +243,11 @@ async function startServer(): Promise<void> {
 
     request.authUser = authUser;
 
-    if (isStateChangingMethod(request.method) && !hasValidCsrfToken(request)) {
+    if (
+      csrfProtectionEnabled &&
+      isStateChangingMethod(request.method) &&
+      !hasValidCsrfToken(request)
+    ) {
       return reply.code(403).send({
         message: `Invalid CSRF token. Send header ${getCsrfHeaderName()}.`,
       });

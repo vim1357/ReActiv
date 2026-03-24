@@ -192,6 +192,7 @@ A task can be moved to `deferred` if:
 | 2026-03-24 | SEC-01 | CORS restricted to allowlist | Implemented strict origin allowlist with config override (`CORS_ALLOWED_ORIGINS`) |
 | 2026-03-24 | SEC-03-P1 | Added baseline response security headers | Implemented HSTS/XFO/XCTO/Referrer-Policy/Permissions-Policy + `CSP-Report-Only` on backend |
 | 2026-03-24 | SEC-02-P1 | Implemented CSRF enforcement layer | Added `x-csrf-token` validation for cookie-auth mutating endpoints + frontend token propagation from auth endpoints |
+| 2026-03-24 | SEC-02-P2 | Added CSRF rollback feature flag | Introduced `CSRF_PROTECTION_ENABLED` (default `true`) to allow emergency disable without code rollback |
 | 2026-03-24 | API-01-P1 | Added baseline public catalog anti-abuse guard | Added per-IP rate limit for public catalog read endpoints with configurable thresholds |
 | 2026-03-24 | DEC-03 | Approved public field policy | Added `docs/PUBLIC_CATALOG_FIELDS.md` as DEC-03 artifact |
 | 2026-03-24 | API-02-P1 | Masked additional public catalog fields | Hid external/CRM identifiers and sensitive filter dimensions for public users |
