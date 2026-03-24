@@ -34,6 +34,12 @@ app.get("/health", async () => {
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";
+const DEFAULT_ALLOWED_CORS_ORIGINS = [
+  "https://reactiv.pro",
+  "https://www.reactiv.pro",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
 
 const ALWAYS_PUBLIC_PATHS = new Set([
   "/",
@@ -68,12 +74,68 @@ function isOpenModePublicPath(requestPath: string): boolean {
   );
 }
 
+function normalizeOriginValue(rawOrigin: string): string | null {
+  const value = rawOrigin.trim();
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+function resolveAllowedCorsOrigins(): Set<string> {
+  const configuredOrigins = process.env.CORS_ALLOWED_ORIGINS
+    ?.split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const source = configuredOrigins?.length
+    ? configuredOrigins
+    : DEFAULT_ALLOWED_CORS_ORIGINS;
+
+  const normalizedOrigins = source
+    .map(normalizeOriginValue)
+    .filter((value): value is string => Boolean(value));
+
+  return new Set(normalizedOrigins);
+}
+
+function isAllowedCorsOrigin(
+  origin: string | undefined,
+  allowedOrigins: Set<string>,
+): boolean {
+  // Requests without Origin are typically same-origin or non-browser clients.
+  if (!origin) {
+    return true;
+  }
+
+  const normalizedOrigin = normalizeOriginValue(origin);
+  if (!normalizedOrigin) {
+    return false;
+  }
+
+  return allowedOrigins.has(normalizedOrigin);
+}
+
 initializeSchema();
 ensureBootstrapAdmin(app.log);
 
 async function startServer(): Promise<void> {
+  const allowedCorsOrigins = resolveAllowedCorsOrigins();
+
   await app.register(cors, {
-    origin: true,
+    origin(origin, cb) {
+      const allowed = isAllowedCorsOrigin(origin, allowedCorsOrigins);
+      if (!allowed && origin) {
+        app.log.warn({ origin }, "cors_origin_blocked");
+      }
+
+      cb(null, allowed);
+    },
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   });

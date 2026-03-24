@@ -50,7 +50,7 @@ A task can be moved to `deferred` if:
 | ID | Category | Priority | Status | Task | Depends on | Definition of done |
 |---|---|---|---|---|---|---|
 | SEC-00 | Security | P0 | in_progress | Approve access matrix `endpoint -> public/auth/admin` | DEC-05 | Approved matrix for all endpoints plus agreed exceptions (`docs/SECURITY_ENDPOINT_ACCESS_MATRIX.md`) |
-| SEC-01 | Security | P0 | blocked | Restrict CORS to trusted origin allowlist | DEC-02, SEC-00 | Unknown origins do not receive ACAO, trusted origins keep working |
+| SEC-01 | Security | P0 | done | Restrict CORS to trusted origin allowlist | DEC-02, SEC-00 | Unknown origins do not receive ACAO, trusted origins keep working |
 | SEC-02 | Security | P0 | todo | Add CSRF protection for cookie-auth state-changing endpoints | SEC-00 | POST/PUT/PATCH/DELETE without valid CSRF token are rejected |
 | SEC-03 | Security | P0 | todo | Add baseline security headers on frontend/API | SEC-00 | HSTS/CSP/XFO/XCTO/Referrer-Policy/Permissions-Policy are stable |
 | API-01 | API Protection | P1 | todo | Limit bulk catalog scraping (rate limit, page-size limits, anti-abuse) | SEC-00 | Automated bulk extraction is reduced without breaking showcase UX |
@@ -63,8 +63,8 @@ A task can be moved to `deferred` if:
 ## Decisions and dependencies (to approve)
 | ID | Decision | Status | Blocks |
 |---|---|---|---|
-| DEC-01 | Canonical domain: `reactiv.pro` or `www.reactiv.pro` | pending | SEO-01, SEC-01 |
-| DEC-02 | Trusted origin allowlist (prod/stage/local) | pending | SEC-01 |
+| DEC-01 | Canonical domain: `reactiv.pro` or `www.reactiv.pro` | done (`reactiv.pro`) | SEO-01, SEC-01 |
+| DEC-02 | Trusted origin allowlist (prod/stage/local) | done (`https://reactiv.pro`,`https://www.reactiv.pro`,`http://localhost:5173`,`http://127.0.0.1:5173`) | SEC-01 |
 | DEC-03 | Approved public catalog field set | pending | API-02 |
 | DEC-04 | Target frontend SLO metrics (LCP/TBT/CLS) | pending | PERF-02 |
 | DEC-05 | Confirm whether ADR is required for SEC-00 access model boundaries | done | SEC-00, SEC-02 |
@@ -159,13 +159,13 @@ A task can be moved to `deferred` if:
 ## What we do now (real-risk focus)
 `Now`:
 - SEC-00
-- DEC-01/02/03/05
-- SEC-01 (after DEC-02)
+- DEC-03
 - SEC-03 baseline headers
+- SEC-02
 
 `Next`:
-- SEC-02
 - API-01 baseline anti-abuse
+- API-02 field minimization rollout (after DEC-03)
 
 `Later / based on data`:
 - API-02 full tighten
@@ -187,6 +187,9 @@ A task can be moved to `deferred` if:
 | 2026-03-24 | LANG-EN | Rewrote tracker to English | Removed translit ambiguity for security decisions |
 | 2026-03-24 | SEC-00-DRAFT | Published endpoint access matrix artifact | Added `docs/SECURITY_ENDPOINT_ACCESS_MATRIX.md` with role/token/mode access mapping |
 | 2026-03-24 | DEC-05 | ADR boundary clarified | No ADR required for SEC-00 documentation; ADR required before changing access model boundaries |
+| 2026-03-24 | DEC-01 | Canonical host approved | Selected `reactiv.pro` as canonical host |
+| 2026-03-24 | DEC-02 | CORS allowlist approved | Trusted origins fixed for prod/local development |
+| 2026-03-24 | SEC-01 | CORS restricted to allowlist | Implemented strict origin allowlist with config override (`CORS_ALLOWED_ORIGINS`) |
 
 ## Tracking rules
 - Order is flexible, but respect `Depends on`.
