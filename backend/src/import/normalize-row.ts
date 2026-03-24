@@ -9,6 +9,7 @@ import { normalizeVehicleTypeWithMeta } from "./normalize-vehicle-type";
 import { parseBoolean } from "./parse-boolean";
 import { parseInteger } from "./parse-integer";
 import { parseKeyCount } from "./parse-key-count";
+import { parseMileageKm } from "./parse-mileage";
 import { parsePrice } from "./parse-price";
 
 export interface NormalizedVehicleOfferRow {
@@ -108,7 +109,7 @@ export function normalizeVehicleOfferRow(
     vehicle_type_raw: vehicleTypeMeta.rawNormalized,
     vehicle_type_unknown_mapped: vehicleTypeMeta.usedFallback,
     year: parseInteger(rawYear),
-    mileage_km: parseInteger(rawMileage),
+    mileage_km: parseMileageKm(rawMileage),
     key_count: parsedKeyCount,
     pts_type: normalizeString(getValue(row, fieldToColumnIndex, "pts_type")) || null,
     has_encumbrance: parsedHasEncumbrance,
