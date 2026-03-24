@@ -43,41 +43,122 @@
     <meta name="yandex-verification" content="fedf308208a9b3f7" />
     <link rel="canonical" href="https://reactiv.pro/" />
 
-    <!-- Yandex.Metrika counter -->
+    <!-- Deferred third-party scripts (analytics/chat) -->
     <script type="text/javascript">
-      (function (m, e, t, r, i, k, a) {
-        m[i] =
-          m[i] ||
-          function () {
-            (m[i].a = m[i].a || []).push(arguments);
-          };
-        m[i].l = 1 * new Date();
-        for (var j = 0; j < document.scripts.length; j++) {
-          if (document.scripts[j].src === r) {
-            return;
+      (function () {
+        var METRIKA_ID = 106991436;
+        var METRIKA_SRC = "https://mc.yandex.ru/metrika/tag.js?id=" + METRIKA_ID;
+        var JIVO_SRC = "https://code.jivo.ru/widget/ZaUQHxLJ11";
+        var METRIKA_IDLE_TIMEOUT_MS = 2500;
+        var JIVO_AUTOLOAD_TIMEOUT_MS = 12000;
+        var metrikaLoaded = false;
+        var jivoLoaded = false;
+        var jivoAutoloadTimer = null;
+
+        function addScriptOnce(src) {
+          var scripts = document.getElementsByTagName("script");
+          for (var i = 0; i < scripts.length; i += 1) {
+            var currentSrc = scripts[i].getAttribute("src") || scripts[i].src || "";
+            if (currentSrc === src || currentSrc.indexOf(src) !== -1) {
+              return;
+            }
+          }
+
+          var script = document.createElement("script");
+          script.async = true;
+          script.src = src;
+          var firstScript = scripts[0];
+          if (firstScript && firstScript.parentNode) {
+            firstScript.parentNode.insertBefore(script, firstScript);
+          } else {
+            document.head.appendChild(script);
           }
         }
-        k = e.createElement(t);
-        a = e.getElementsByTagName(t)[0];
-        k.async = 1;
-        k.src = r;
-        a.parentNode.insertBefore(k, a);
-      })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js?id=106991436", "ym");
 
-      ym(106991436, "init", {
-        ssr: true,
-        webvisor: true,
-        clickmap: true,
-        ecommerce: "dataLayer",
-        referrer: document.referrer,
-        url: location.href,
-        accurateTrackBounce: true,
-        trackLinks: true,
-      });
+        function runOnIdle(callback, timeoutMs) {
+          if (window.requestIdleCallback) {
+            window.requestIdleCallback(callback, { timeout: timeoutMs });
+            return;
+          }
+          window.setTimeout(callback, timeoutMs);
+        }
+
+        function initMetrikaQueue() {
+          window.ym =
+            window.ym ||
+            function () {
+              (window.ym.a = window.ym.a || []).push(arguments);
+            };
+          window.ym.l = 1 * new Date();
+        }
+
+        function loadMetrika() {
+          if (metrikaLoaded) {
+            return;
+          }
+          metrikaLoaded = true;
+          initMetrikaQueue();
+          addScriptOnce(METRIKA_SRC);
+
+          window.ym(METRIKA_ID, "init", {
+            ssr: true,
+            webvisor: true,
+            clickmap: true,
+            ecommerce: "dataLayer",
+            referrer: document.referrer,
+            url: location.href,
+            accurateTrackBounce: true,
+            trackLinks: true,
+          });
+        }
+
+        function scheduleMetrikaLoad() {
+          runOnIdle(loadMetrika, METRIKA_IDLE_TIMEOUT_MS);
+        }
+
+        function loadJivo() {
+          if (jivoLoaded) {
+            return;
+          }
+          jivoLoaded = true;
+          addScriptOnce(JIVO_SRC);
+        }
+
+        function detachChatListeners() {
+          var events = ["pointerdown", "keydown", "touchstart", "scroll"];
+          for (var i = 0; i < events.length; i += 1) {
+            window.removeEventListener(events[i], loadJivoOnInteraction, listenerOptions);
+          }
+          if (jivoAutoloadTimer !== null) {
+            window.clearTimeout(jivoAutoloadTimer);
+            jivoAutoloadTimer = null;
+          }
+        }
+
+        function loadJivoOnInteraction() {
+          loadJivo();
+          detachChatListeners();
+        }
+
+        var listenerOptions = { passive: true };
+        var chatTriggerEvents = ["pointerdown", "keydown", "touchstart", "scroll"];
+        for (var j = 0; j < chatTriggerEvents.length; j += 1) {
+          window.addEventListener(chatTriggerEvents[j], loadJivoOnInteraction, listenerOptions);
+        }
+
+        jivoAutoloadTimer = window.setTimeout(function () {
+          loadJivo();
+          detachChatListeners();
+        }, JIVO_AUTOLOAD_TIMEOUT_MS);
+
+        if (document.readyState === "complete") {
+          scheduleMetrikaLoad();
+        } else {
+          window.addEventListener("load", scheduleMetrikaLoad, { once: true });
+        }
+      })();
     </script>
-    <!-- /Yandex.Metrika counter -->
-
-    <script src="//code.jivo.ru/widget/ZaUQHxLJ11" async></script>
+    <!-- /Deferred third-party scripts -->
   </head>
   <body>
     <noscript>
