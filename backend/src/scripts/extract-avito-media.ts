@@ -44,6 +44,22 @@ const DEFAULT_OUTPUT_PATH = path.resolve(
   "data/avito-media-extract-result.json",
 );
 
+function resolveCliPath(rawPath: string | null): string | null {
+  if (!rawPath) {
+    return null;
+  }
+
+  if (path.isAbsolute(rawPath)) {
+    return rawPath;
+  }
+
+  // When script is executed via `npm --prefix backend ...`,
+  // process.cwd() becomes `<repo>/backend`, while user usually passes
+  // paths relative to the original shell directory.
+  const baseDir = process.env.INIT_CWD?.trim() || process.cwd();
+  return path.resolve(baseDir, rawPath);
+}
+
 function parseNumberArg(name: string, fallback: number): number {
   const inline = process.argv.find((item) => item.startsWith(`--${name}=`));
   if (inline) {
@@ -91,20 +107,17 @@ function parseOptions(): ScriptOptions {
   const positionalOutPath = positionalArgs[2] ?? null;
 
   return {
-    inputPath: parseStringArg("input"),
+    inputPath: resolveCliPath(parseStringArg("input")),
     singleUrl: parseStringArg("url") ?? positionalUrl,
     singleOfferCode:
       parseStringArg("offer-code") ?? positionalOfferCode ?? "single_offer",
     outputPath: parseStringArg("out") || positionalOutPath
-      ? path.resolve(
-          process.cwd(),
-          (parseStringArg("out") ?? positionalOutPath) as string,
-        )
+      ? (resolveCliPath(parseStringArg("out") ?? positionalOutPath) as string)
       : DEFAULT_OUTPUT_PATH,
     concurrency: parseNumberArg("concurrency", 2),
     timeoutMs: parseNumberArg("timeout", 20_000),
     userAgent: parseStringArg("user-agent") ?? DEFAULT_USER_AGENT,
-    saveHtmlDir: parseStringArg("save-html-dir"),
+    saveHtmlDir: resolveCliPath(parseStringArg("save-html-dir")),
     updateApiBaseUrl: parseStringArg("update-api-base"),
     updateEndpoint: parseStringArg("update-endpoint") ?? "/admin/alpha-media/bulk-update",
     updateToken: parseStringArg("token") ?? process.env.ALPHA_MEDIA_SYNC_TOKEN ?? null,
