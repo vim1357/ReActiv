@@ -20,6 +20,16 @@ Scope: local smoke verification for implemented security/perf controls
 - `POST /api/auth/logout` with valid CSRF -> `200`, `Cache-Control: no-store, no-cache, must-revalidate`.
 - `GET /api/auth/me` after logout -> `401`.
 
+### Anti-automation (SEC-06)
+- Login brute-force guard (`/api/auth/login`) validated with temporary low test threshold:
+  - env: `AUTH_LOGIN_RATE_LIMIT_MAX_IP_LOGIN_ATTEMPTS=3`
+  - probe result: `401,401,401,429,429`
+  - expected behavior confirmed: rate limit activates after configured failure threshold.
+- Guest activity ingest per-IP guard (`/api/public/activity/events`) validated with temporary low test threshold:
+  - env: `GUEST_ACTIVITY_RATE_LIMIT_MAX_EVENTS_PER_IP=10`
+  - probe result: `201` x10, then `429,429`
+  - expected behavior confirmed: IP-level guard blocks burst spam across different guest sessions.
+
 ### Public catalog protection
 - Platform mode switched to `open` for public checks, then restored to original value.
 - `GET /api/catalog/summary` -> `200`, public cache policy present.
@@ -61,4 +71,5 @@ Scope: local smoke verification for implemented security/perf controls
 
 ## Conclusion
 - Implemented controls for `SEC-02`, `SEC-03`, `API-01`, `API-02`, and `PERF-01` passed local smoke checks.
+- `SEC-06` anti-automation controls passed local smoke checks with deterministic threshold probes.
 - Re-audit artifact is complete for `QA-01`.
