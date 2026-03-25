@@ -232,6 +232,8 @@ A task can be moved to `deferred` if:
 | 2026-03-25 | SEC-06-P2 | Verified anti-automation thresholds with local deterministic probes | Confirmed `429` behavior for login brute-force and guest activity per-IP guard (`docs/SECURITY_QA_REPORT_2026-03-25.md`) |
 | 2026-03-25 | SEC-04-P2 | Added redirect-chain host validation for remote media fetch | Media proxy follows redirects manually and re-validates allowlist on each hop before fetch |
 | 2026-03-25 | SEC-04-P3 | Verified SSRF hardening and closed SEC-04 | Confirmed live allowlist behavior and deterministic redirect-chain checks (`docs/SECURITY_QA_REPORT_2026-03-25.md`) |
+| 2026-03-25 | SEC-05-P2 | Added automated frontend headers verification script | Added `scripts/check-frontend-security-headers.ps1` and linked it from rollout runbook/README |
+| 2026-03-25 | SEC-05-P3 | Captured production baseline before infra rollout | Script check on `reactiv.pro`/`www.reactiv.pro` shows required frontend security headers are currently missing |
 
 ## Tracking rules
 - Order is flexible, but respect `Depends on`.

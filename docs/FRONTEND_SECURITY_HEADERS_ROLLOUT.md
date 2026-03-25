@@ -64,6 +64,12 @@ Notes:
    - switch from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`.
 
 ## Verification checklist
+Run automated check from repository root:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-frontend-security-headers.ps1
+```
+
 1. Header presence on both hosts:
    - `Strict-Transport-Security`
    - `X-Frame-Options`

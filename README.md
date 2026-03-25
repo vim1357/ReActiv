@@ -262,6 +262,9 @@ See details in:
 - `npm --prefix frontend run build`
 - `npm --prefix frontend run preview`
 
+### Ops / Security
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-frontend-security-headers.ps1`
+
 ## Known Operational Notes
 
 - `reactiv.pro/showcase/:id` is SPA runtime route; per-lot messenger preview is currently guaranteed via API share route (`api.reactiv.pro/showcase/:id`).
