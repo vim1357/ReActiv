@@ -9,6 +9,7 @@ import {
   resolveStoredMediaAbsolutePath,
 } from "../services/local-media-storage";
 import {
+  isAllowedMediaRemoteUrl,
   resolveGalleryUrls,
   resolvePreviewUrl,
 } from "../services/media-preview-service";
@@ -182,6 +183,9 @@ export async function registerMediaRoutes(app: FastifyInstance): Promise<void> {
     const resolved = await resolvePreviewUrl(sourceUrl);
     if (!resolved.previewUrl) {
       return reply.code(404).send({ message: "preview not found" });
+    }
+    if (!isAllowedMediaRemoteUrl(resolved.previewUrl)) {
+      return reply.code(400).send({ message: "unsupported preview source" });
     }
 
     try {

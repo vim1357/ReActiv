@@ -4,7 +4,10 @@ import {
   findCatalogItemById,
   searchCatalogItems,
 } from "../repositories/catalog-repository";
-import { resolvePreviewUrl } from "../services/media-preview-service";
+import {
+  isAllowedMediaRemoteUrl,
+  resolvePreviewUrl,
+} from "../services/media-preview-service";
 
 const DEFAULT_WEB_BASE_URL = "https://reactiv.pro";
 const DEFAULT_SHARE_BASE_URL = "https://api.reactiv.pro";
@@ -511,6 +514,9 @@ export async function registerShareRoutes(app: FastifyInstance): Promise<void> {
 
     const resolved = await resolvePreviewUrl(sourceUrl);
     if (!resolved.previewUrl) {
+      return reply.redirect(fallbackImageUrl(), 302);
+    }
+    if (!isAllowedMediaRemoteUrl(resolved.previewUrl)) {
       return reply.redirect(fallbackImageUrl(), 302);
     }
 

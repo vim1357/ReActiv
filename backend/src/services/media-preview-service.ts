@@ -1,3 +1,5 @@
+import { isIP } from "node:net";
+
 interface PreviewResult {
   previewUrl: string | null;
 }
@@ -29,11 +31,117 @@ const PREVIEW_CACHE_TTL_MS = 10 * 60 * 1000;
 const URL_REACHABILITY_CACHE_TTL_MS = 15 * 60 * 1000;
 const URL_REACHABILITY_TIMEOUT_MS = 4_000;
 const URL_REACHABILITY_CONCURRENCY = 8;
+const DEFAULT_MEDIA_ALLOWED_HOST_PATTERNS = [
+  "yadi.sk",
+  ".yadi.sk",
+  "disk.yandex.ru",
+  "downloader.disk.yandex.ru",
+  "cloud-api.yandex.net",
+  "storage.yandexcloud.net",
+  "api-sale.resoleasing.com",
+  "admin.resoleasing.com",
+];
+const BLOCKED_HOSTS = new Set(["localhost", "localhost.localdomain"]);
 const previewCache = new Map<string, { previewUrl: string | null; expiresAt: number }>();
 const galleryCache = new Map<string, { galleryUrls: string[]; expiresAt: number }>();
 const urlReachabilityCache = new Map<string, { isReachable: boolean; expiresAt: number }>();
 const RESO_IMAGE_BASE_URL = "https://api-sale.resoleasing.com";
 const RESO_SALE_API_BASE_URL = "https://admin.resoleasing.com/api/sales-catalog";
+
+function normalizeHostPattern(value: string): string | null {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const wildcardSuffixPattern = normalized.startsWith(".")
+    ? normalized.slice(1)
+    : normalized;
+  if (!wildcardSuffixPattern) {
+    return null;
+  }
+
+  if (!/^[a-z0-9.-]+$/u.test(wildcardSuffixPattern)) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function resolveAllowedMediaHostPatterns(): string[] {
+  const configured = process.env.MEDIA_ALLOWED_HOSTS
+    ?.split(",")
+    .map((item) => normalizeHostPattern(item))
+    .filter((item): item is string => Boolean(item));
+
+  const source = configured && configured.length > 0
+    ? configured
+    : DEFAULT_MEDIA_ALLOWED_HOST_PATTERNS;
+  return [...new Set(source)];
+}
+
+const allowedMediaHostPatterns = resolveAllowedMediaHostPatterns();
+
+function isTrustedDiskYandexHost(host: string): boolean {
+  if (host === "disk.yandex.ru") {
+    return true;
+  }
+
+  const labels = host.split(".");
+  return labels.length === 3 && labels[0] === "disk" && labels[1] === "yandex";
+}
+
+function hostMatchesConfiguredPattern(host: string, pattern: string): boolean {
+  if (pattern.startsWith(".")) {
+    const normalizedSuffix = pattern.slice(1);
+    return host === normalizedSuffix || host.endsWith(`.${normalizedSuffix}`);
+  }
+
+  return host === pattern;
+}
+
+function isAllowedMediaHost(host: string): boolean {
+  if (BLOCKED_HOSTS.has(host) || host.endsWith(".local")) {
+    return false;
+  }
+
+  if (isIP(host) !== 0) {
+    return false;
+  }
+
+  if (isTrustedDiskYandexHost(host)) {
+    return true;
+  }
+
+  return allowedMediaHostPatterns.some((pattern) => hostMatchesConfiguredPattern(host, pattern));
+}
+
+function parseHttpUrl(value: string): URL | null {
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function isAllowedMediaRemoteUrl(value: string): boolean {
+  const parsed = parseHttpUrl(value);
+  if (!parsed) {
+    return false;
+  }
+
+  const host = parsed.hostname.trim().toLowerCase();
+  if (!host) {
+    return false;
+  }
+
+  return isAllowedMediaHost(host);
+}
 
 function getCachedGalleryUrls(cacheKey: string): string[] | null {
   const cached = galleryCache.get(cacheKey);
@@ -91,17 +199,9 @@ function isDirectImageUrl(url: string): boolean {
 function isYandexPublicLink(url: string): boolean {
   try {
     const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
+    const host = parsed.hostname.toLowerCase().trim();
 
-    if (host === "yadi.sk" || host.endsWith(".yadi.sk")) {
-      return true;
-    }
-
-    if (host.startsWith("disk.yandex.")) {
-      return true;
-    }
-
-    return host === "disk.yandex.ru";
+    return isAllowedMediaHost(host) && (host === "yadi.sk" || host.endsWith(".yadi.sk") || isTrustedDiskYandexHost(host));
   } catch {
     return false;
   }
@@ -119,10 +219,10 @@ function extractHttpUrls(rawValue: string): string[] {
 function extractDirectImageUrls(rawSource: string): string[] {
   const extractedUrls = extractHttpUrls(rawSource);
   if (extractedUrls.length > 0) {
-    return extractedUrls.filter((url) => isDirectImageUrl(url));
+    return extractedUrls.filter((url) => isDirectImageUrl(url) && isAllowedMediaRemoteUrl(url));
   }
 
-  return isDirectImageUrl(rawSource) ? [rawSource] : [];
+  return isDirectImageUrl(rawSource) && isAllowedMediaRemoteUrl(rawSource) ? [rawSource] : [];
 }
 
 async function fetchWithTimeout(url: string, method: "HEAD" | "GET"): Promise<Response> {
